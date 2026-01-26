@@ -34,7 +34,7 @@ yarn-error.log*
 .env*
 
 # local notes
-CHROME_RENDERING_NOTES.md
+notes/
 
 # vercel
 .vercel
