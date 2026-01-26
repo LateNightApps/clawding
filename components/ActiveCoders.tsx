@@ -61,7 +61,7 @@ export function ActiveCoders() {
         <Link
           key={coder.slug}
           href={`/${coder.slug}`}
-          className="flex items-center justify-between py-3 px-4 rounded-lg transition-colors hover:bg-card/50"
+          className="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-card/50"
         >
           <div className="flex items-center gap-3">
             <span className="text-muted text-sm font-mono w-5 text-right">

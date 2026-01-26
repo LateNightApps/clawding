@@ -15,7 +15,7 @@ export function UpdateCard({ slug, project, content, created_at, showSlug = fals
   const date = new Date(created_at)
 
   return (
-    <div className="py-5 transition-colors hover:bg-card/50 -mx-2 px-2 rounded-lg">
+    <div className="py-5 hover:bg-card/50 -mx-2 px-2 rounded-lg">
       <div className="flex items-center gap-2 text-sm mb-2">
         {showSlug && slug && (
           <>

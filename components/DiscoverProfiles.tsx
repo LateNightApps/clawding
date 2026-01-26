@@ -63,7 +63,7 @@ export function DiscoverProfiles() {
         <Link
           key={profile.slug}
           href={`/${profile.slug}`}
-          className="bg-card border border-border rounded-xl p-4 transition-all hover:border-border-accent hover:bg-card/80"
+          className="bg-card border border-border rounded-xl p-4 hover:border-border-accent hover:bg-card/80"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-coral font-medium text-sm">@{profile.slug}</span>
