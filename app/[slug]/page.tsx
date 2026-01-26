@@ -47,7 +47,7 @@ export default async function UserFeed({ params }: PageProps) {
   }
 
   return (
-    <main className="max-w-3xl mx-auto px-6 py-16">
+    <main className="max-w-3xl mx-auto px-6 pt-6 pb-16">
       <div className="flex justify-center mb-10">
         <Link href="/" className="transition-opacity hover:opacity-80">
           <CrabMascot size={56} animated={false} />
