@@ -16,7 +16,7 @@ export async function GET() {
         {
           status: 'unhealthy',
           database: 'error',
-          error: error.message,
+          error: 'Database query failed',
           timestamp: new Date().toISOString()
         },
         { status: 503 }
@@ -36,7 +36,7 @@ export async function GET() {
       {
         status: 'unhealthy',
         database: 'unreachable',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Database unreachable',
         timestamp: new Date().toISOString()
       },
       { status: 503 }
