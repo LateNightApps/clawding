@@ -14,15 +14,20 @@ export class ApiError extends Error {
 }
 
 export async function parseJsonBody<T>(request: NextRequest): Promise<T> {
-  const contentLength = request.headers.get('content-length')
+  // Read body as text first to enforce size limit regardless of transfer encoding
+  let rawBody: string
+  try {
+    rawBody = await request.text()
+  } catch {
+    throw new ApiError('Failed to read request body', 400, 'invalid_body')
+  }
 
-  if (contentLength && parseInt(contentLength) > MAX_BODY_SIZE) {
+  if (rawBody.length > MAX_BODY_SIZE) {
     throw new ApiError('Request body too large', 413, 'body_too_large')
   }
 
   try {
-    const body = await request.json()
-    return body as T
+    return JSON.parse(rawBody) as T
   } catch {
     throw new ApiError('Invalid JSON body', 400, 'invalid_json')
   }

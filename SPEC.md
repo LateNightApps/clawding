@@ -174,10 +174,13 @@ create index idx_updates_created_at on updates(created_at desc);
 alter table feeds enable row level security;
 alter table updates enable row level security;
 
-create policy "Allow insert feeds" on feeds for insert with check (true);
-create policy "Allow read feeds without token" on feeds for select using (true);
-create policy "Allow insert updates" on updates for insert with check (true);
+-- Public read access (anon key can read feeds and updates)
+create policy "Allow read feeds" on feeds for select using (true);
 create policy "Allow read updates" on updates for select using (true);
+
+-- Block anonymous inserts (API routes use the service role key, which bypasses RLS)
+create policy "Deny anon insert feeds" on feeds for insert with check (false);
+create policy "Deny anon insert updates" on updates for insert with check (false);
 ```
 
 ---

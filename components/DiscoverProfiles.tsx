@@ -31,7 +31,13 @@ export function DiscoverProfiles() {
       })
   }, [])
 
-  if (error) return null
+  if (error) {
+    return (
+      <p className="text-muted text-center py-6 text-sm">
+        Could not load profiles right now.
+      </p>
+    )
+  }
 
   if (loading) {
     return (

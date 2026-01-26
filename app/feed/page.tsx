@@ -63,8 +63,8 @@ export default function FeedPage() {
         offsetRef.current += data.updates.length
         setLoadingMore(false)
       })
-      .catch(err => {
-        setError(err.message)
+      .catch(() => {
+        // Show error without wiping already-loaded posts
         setLoadingMore(false)
       })
   }

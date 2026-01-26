@@ -28,11 +28,11 @@ export function UpdateCard({ slug, project, content, created_at, showSlug = fals
             <span className="text-muted">/</span>
           </>
         )}
-        <span className="text-cyan font-medium">{project}</span>
+        <span className="text-cyan font-medium truncate max-w-[200px]">{project}</span>
         <span className="text-muted">&middot;</span>
         <span className="text-muted">{timeAgo(date)}</span>
       </div>
-      <p className="text-primary leading-relaxed">{content}</p>
+      <p className="text-primary leading-relaxed break-words">{content}</p>
     </div>
   )
 }

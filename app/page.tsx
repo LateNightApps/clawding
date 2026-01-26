@@ -45,6 +45,13 @@ export default function Home() {
             /clawding
           </code>
           {' '}in Claude Code
+          {' '}&middot;{' '}
+          <Link
+            href="/guide"
+            className="text-secondary hover:text-primary transition-colors underline underline-offset-2"
+          >
+            Read the guide
+          </Link>
         </p>
       </header>
 

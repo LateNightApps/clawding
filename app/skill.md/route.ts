@@ -2,68 +2,191 @@ import { NextResponse } from 'next/server'
 
 const skillFile = `---
 name: clawding
-description: Post updates about what you're coding with Claude to your public Clawding feed
+description: Post updates about what you're building with Claude to your public Clawding feed
 ---
 
 # Clawding
 
-## If CLAWDING_TOKEN is not set (first time setup):
+Clawding uses a config file at ~/.config/clawding.json to store your feeds and tokens.
+
+## Config file format
+
+\`\`\`json
+{
+  "feeds": {
+    "slug-name": "token-value"
+  },
+  "projects": {
+    "folder-name": "slug-name"
+  },
+  "default": "slug-name"
+}
+\`\`\`
+
+- "feeds": maps feed slugs to their auth tokens
+- "projects": maps project folder names to feed slugs (so the right feed is auto-selected)
+- "default": the feed to use when no project match is found
+
+---
+
+## Step 1: Load config
+
+1. Try to read ~/.config/clawding.json
+2. If the file exists and has valid JSON with a "feeds" object that has at least one entry, config is loaded. Proceed to Step 2.
+3. If the file does not exist or is empty or has no feeds, check for legacy env vars:
+   - If CLAWDING_TOKEN and CLAWDING_SLUG are set, migrate them:
+     a. Create ~/.config directory if it doesn't exist
+     b. Write ~/.config/clawding.json with: {"feeds": {"$CLAWDING_SLUG": "$CLAWDING_TOKEN"}, "projects": {}, "default": "$CLAWDING_SLUG"}
+     c. Remove CLAWDING_TOKEN and CLAWDING_SLUG from ~/.claude/settings.json env object
+     d. Tell user: "Migrated your Clawding config to ~/.config/clawding.json"
+     e. Proceed to Step 2.
+   - If no legacy env vars either, this is a first-time setup. Go to "First time setup" below.
+
+---
+
+## Step 2: Determine the command
+
+Parse what the user typed after /clawding:
+
+- "/clawding" (no args) → Go to "Post an update"
+- "/clawding new" → Go to "Add a new feed"
+- "/clawding feeds" → Go to "List feeds"
+- "/clawding link FEEDNAME" → Go to "Link project to feed"
+- "/clawding default FEEDNAME" → Go to "Change default feed"
+- "/clawding delete" → Go to "Delete last post"
+- "/clawding @FEEDNAME any message here" → Go to "Post an update" with feed forced to FEEDNAME and message set to everything after @FEEDNAME
+- "/clawding any other text" → Go to "Post an update" with message set to the text
+
+---
+
+## First time setup
 
 1. Welcome them: "Welcome to Clawding! Let's get you set up."
-2. Ask: "What username do you want for your Clawding feed?"
-3. POST to https://clawding.app/api/check with {"slug": "USERNAME"} to check availability
+2. Ask: "What name do you want for your feed?"
+3. POST to https://clawding.app/api/check with {"slug": "NAME"} to check availability
 4. If taken, show alternatives from the response and ask again
-5. Once they pick an available one, POST to https://clawding.app/api/claim with {"slug": "USERNAME"}
-6. Get back the token
-7. Explain: "I'll save your token to Claude's settings file (~/.claude/settings.json). This is the standard way to store credentials for Claude Code - you won't have to enter it again."
-8. Save to their settings by adding to ~/.claude/settings.json:
-   - Add "env": {"CLAWDING_TOKEN": "token", "CLAWDING_SLUG": "username"}
-   - If the file exists, merge with existing content
-   - If it doesn't exist, create it
-9. Confirm: "You're all set! Your feed is at clawding.app/USERNAME"
-10. Ask what they want to post for their first update, or offer to summarize what was done in this session
+5. Once they pick an available one, POST to https://clawding.app/api/claim with {"slug": "NAME"}
+6. Get back the token from the response
+7. Create ~/.config directory if it doesn't exist
+8. Write ~/.config/clawding.json with: {"feeds": {"NAME": "TOKEN"}, "projects": {}, "default": "NAME"}
+9. Confirm: "You're all set! Your feed is at clawding.app/NAME"
+10. Then ask what they want to post, or offer to summarize what was done in this session. Follow the "Post an update" flow.
 
-## If CLAWDING_TOKEN is set (normal usage):
+---
 
-1. Get the project name from the current folder/repo name
-2. If they provided a message (/clawding Fixed the bug), use that message and skip to step 5
-3. If no message, look at the conversation and write a 1-2 sentence summary
-   - Write for humans: "Added user login" not "implemented OAuth2 flow"
-4. Show them the suggested post and give options:
-   - "Ready to post to clawding.app/$CLAWDING_SLUG"
+## Post an update
+
+1. Resolve which feed to post to (in this order):
+   a. If a feed was forced via @FEEDNAME syntax, use that feed. If that slug is not in the config feeds, tell the user and stop.
+   b. Get the current project folder name (basename of the working directory or repo name).
+   c. Check config "projects" map — if the folder name has a mapping, use that feed.
+   d. Check if the folder name exactly matches a feed slug in the config — if so, use that feed.
+   e. If there is only one feed in the config, use it.
+   f. If there are multiple feeds and no match, ask the user which feed to use. Show a numbered list of their feeds. After they pick, save the mapping to the "projects" object in ~/.config/clawding.json so they are never asked again for this project. Tell them: "Linked [folder-name] → [feed-slug]. This project will auto-post to clawding.app/[feed-slug] from now on."
+
+2. Get the message:
+   a. If a message was provided (from args), use it.
+   b. If no message, look at the conversation and write a 1-2 sentence summary.
+      - Write for humans: "Added user login" not "Implemented OAuth2 authentication flow"
+
+3. Get the project name from the current folder or repo name.
+
+4. Show the user what will be posted:
+   - "Ready to post to clawding.app/SLUG"
    - "Project: PROJECT_NAME"
-   - "Update: YOUR_SUMMARY"
+   - "Update: MESSAGE"
    - Options:
      1. Post this
      2. Write my own (let them type a custom message)
      3. Cancel
-5. If they pick "Write my own", ask what they want to post and use that instead
-6. POST to https://clawding.app/api/post/$CLAWDING_SLUG:
-   - Header: Authorization: Bearer $CLAWDING_TOKEN
+
+5. POST to https://clawding.app/api/post/SLUG:
+   - Header: Authorization: Bearer TOKEN (from config feeds for this slug)
    - Header: Content-Type: application/json
-   - Body: {"project": "PROJECT", "update": "MESSAGE"}
-7. Confirm: "Posted! View at clawding.app/$CLAWDING_SLUG"
+   - Body: {"project": "PROJECT_NAME", "update": "MESSAGE"}
 
-## If they run /clawding delete:
+6. Confirm: "Posted! View at clawding.app/SLUG"
 
-1. GET https://clawding.app/api/delete/$CLAWDING_SLUG to fetch the most recent post:
-   - Header: Authorization: Bearer $CLAWDING_TOKEN
-2. Show them the post:
-   - "Your most recent post:"
+---
+
+## Add a new feed
+
+1. Ask: "What name do you want for your new feed?"
+2. POST to https://clawding.app/api/check with {"slug": "NAME"} to check availability
+3. If taken, show alternatives from the response and ask again
+4. Once they pick an available one, POST to https://clawding.app/api/claim with {"slug": "NAME"}
+5. Get back the token
+6. Read ~/.config/clawding.json, add the new slug and token to the "feeds" object, write it back
+7. Confirm: "Added feed: clawding.app/NAME"
+8. Show all their feeds: "Your feeds: SLUG1, SLUG2 (default: DEFAULT)"
+9. Ask if they want to link the current project to this new feed. If yes, save the mapping to the "projects" object.
+
+---
+
+## List feeds
+
+1. Read the config
+2. Show all feeds with their URLs:
+   - "Your feeds:"
+   - For each feed: "  - clawding.app/SLUG" (mark which is default)
+3. If there are project mappings, show them:
+   - "Project mappings:"
+   - For each mapping: "  - FOLDER → SLUG"
+
+---
+
+## Link project to feed
+
+1. The FEEDNAME is the argument after "link"
+2. If FEEDNAME is not in the config feeds, tell the user that feed doesn't exist and show their feeds
+3. Get the current project folder name
+4. Read ~/.config/clawding.json, set projects[folder-name] = FEEDNAME, write it back
+5. Confirm: "Linked [folder-name] → clawding.app/FEEDNAME"
+
+---
+
+## Change default feed
+
+1. The FEEDNAME is the argument after "default"
+2. If FEEDNAME is not in the config feeds, tell the user that feed doesn't exist and show their feeds
+3. Read ~/.config/clawding.json, set "default" to FEEDNAME, write it back
+4. Confirm: "Default feed set to clawding.app/FEEDNAME"
+
+---
+
+## Delete last post
+
+1. Resolve which feed to use (same logic as "Post an update" step 1, but without a forced feed)
+2. GET https://clawding.app/api/delete/SLUG:
+   - Header: Authorization: Bearer TOKEN
+3. If no posts exist, tell them: "No posts to delete on clawding.app/SLUG."
+4. Show the post:
+   - "Your most recent post on clawding.app/SLUG:"
    - "Project: PROJECT_NAME"
    - "Update: CONTENT"
-   - "Posted: TIME_AGO"
-3. Ask: "Delete this post? (yes/no)"
-4. If yes, DELETE https://clawding.app/api/delete/$CLAWDING_SLUG:
-   - Header: Authorization: Bearer $CLAWDING_TOKEN
-5. Confirm: "Deleted!"
-6. If no posts exist, tell them "You have no posts to delete."
+   - "Posted: TIME"
+5. Ask: "Delete this post? (yes/no)"
+6. If yes, DELETE https://clawding.app/api/delete/SLUG:
+   - Header: Authorization: Bearer TOKEN
+7. Confirm: "Deleted!"
 
-## Error handling:
+---
 
-- If the API returns unauthorized, tell them their token may be invalid and offer to run setup again
-- If rate limited, tell them they've hit 50 posts/day limit
-- If any other error, show the error message
+## Error handling
+
+- If the API returns 401 unauthorized, tell them their token may be invalid. Offer to reclaim the feed by running /clawding new.
+- If rate limited (429), tell them they have hit the 50 posts/day limit.
+- If the config file is corrupted or unreadable JSON, tell the user and offer to reset it by running setup again. Back up the old file first.
+- If any other error, show the error message from the API response.
+
+---
+
+## Important rules
+
+- Always read the config file fresh before writing to it (never cache across operations).
+- When writing the config file, preserve all existing data — only modify the specific field being changed.
+- Never display tokens to the user.
+- The guide is at clawding.app/guide if the user needs help.
 `
 
 export async function GET() {

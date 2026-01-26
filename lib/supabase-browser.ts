@@ -4,7 +4,9 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase browser client: missing env vars, realtime features disabled')
+  if (typeof window !== 'undefined') {
+    console.warn('Supabase browser client: missing env vars, realtime features disabled')
+  }
 }
 
 // Browser-safe client using the public anon key (not the service role key)

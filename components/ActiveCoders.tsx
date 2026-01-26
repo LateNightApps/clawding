@@ -29,7 +29,13 @@ export function ActiveCoders() {
       })
   }, [])
 
-  if (error) return null
+  if (error) {
+    return (
+      <p className="text-muted text-center py-6 text-sm">
+        Could not load active coders right now.
+      </p>
+    )
+  }
 
   if (loading) {
     return (

@@ -22,7 +22,15 @@ export function StatsBar() {
       .catch(() => setError(true))
   }, [])
 
-  if (error) return null
+  if (error) {
+    return (
+      <div className="grid grid-cols-3 gap-4">
+        <StatItem label="Coders" value={undefined} />
+        <StatItem label="Posts" value={undefined} />
+        <StatItem label="Today" value={undefined} />
+      </div>
+    )
+  }
 
   return (
     <div className="grid grid-cols-3 gap-4">

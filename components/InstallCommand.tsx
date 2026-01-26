@@ -7,7 +7,9 @@ export function InstallCommand() {
   const command = 'curl -sL clawding.app/i | bash'
 
   const copy = () => {
-    navigator.clipboard.writeText(command)
+    navigator.clipboard.writeText(command).catch(() => {
+      // Clipboard API denied — ignore silently
+    })
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }

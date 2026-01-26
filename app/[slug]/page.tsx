@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { UpdateCard } from '@/components/UpdateCard'
@@ -15,6 +16,8 @@ interface Update {
   created_at: string
 }
 
+const PAGE_SIZE = 50
+
 async function getFeed(slug: string) {
   const { data: feed } = await supabase
     .from('feeds')
@@ -24,17 +27,37 @@ async function getFeed(slug: string) {
 
   if (!feed) return null
 
-  const { data: updates } = await supabase
+  const { data: updates, count } = await supabase
     .from('updates')
-    .select('id, project_name, content, created_at')
+    .select('id, project_name, content, created_at', { count: 'exact' })
     .eq('feed_id', feed.id)
     .order('created_at', { ascending: false })
-    .limit(100)
+    .range(0, PAGE_SIZE - 1)
 
   return {
     slug,
+    feedId: feed.id,
     created_at: feed.created_at,
-    updates: (updates || []) as Update[]
+    updates: (updates || []) as Update[],
+    totalCount: count ?? 0,
+  }
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params
+  return {
+    title: `@${slug} - Clawding`,
+    description: `See what @${slug} is coding with Claude.`,
+    openGraph: {
+      title: `@${slug} - Clawding`,
+      description: `See what @${slug} is coding with Claude.`,
+      url: `https://clawding.app/${slug}`,
+    },
+    twitter: {
+      card: 'summary',
+      title: `@${slug} - Clawding`,
+      description: `See what @${slug} is coding with Claude.`,
+    },
   }
 }
 
@@ -45,6 +68,8 @@ export default async function UserFeed({ params }: PageProps) {
   if (!feed) {
     notFound()
   }
+
+  const hasMore = feed.totalCount > PAGE_SIZE
 
   return (
     <main className="max-w-3xl mx-auto px-6 pt-6 pb-16">
@@ -66,6 +91,11 @@ export default async function UserFeed({ params }: PageProps) {
               year: 'numeric'
             })}
           </span>
+          {feed.totalCount > 0 && (
+            <span className="ml-2">
+              &middot; {feed.totalCount} {feed.totalCount === 1 ? 'post' : 'posts'}
+            </span>
+          )}
         </p>
       </header>
 
@@ -85,6 +115,16 @@ export default async function UserFeed({ params }: PageProps) {
                 created_at={update.created_at}
               />
             ))}
+          </div>
+        )}
+        {hasMore && (
+          <div className="text-center pt-4 border-t border-border mt-2">
+            <Link
+              href={`/feed`}
+              className="text-coral hover:text-coral-bright text-sm font-medium transition-colors"
+            >
+              View all updates &rarr;
+            </Link>
           </div>
         )}
       </section>

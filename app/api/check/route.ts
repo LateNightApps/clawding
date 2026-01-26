@@ -12,7 +12,12 @@ export async function POST(request: NextRequest) {
       throw new ApiError('Too many requests', 429, 'rate_limited')
     }
 
-    const { slug } = await parseJsonBody<{ slug: string }>(request)
+    const body = await parseJsonBody<{ slug: unknown }>(request)
+    const slug = body.slug
+
+    if (typeof slug !== 'string') {
+      throw new ApiError('slug must be a string', 400, 'invalid_slug')
+    }
 
     const validation = validateSlug(slug)
     if (!validation.valid) {
