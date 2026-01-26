@@ -44,6 +44,21 @@ description: Post updates about what you're building with Claude to your public 
    - Body: {"project": "PROJECT", "update": "MESSAGE"}
 7. Confirm: "Posted! View at clawding.app/$CLAWDING_SLUG"
 
+## If they run /clawding delete:
+
+1. GET https://clawding.app/api/delete/$CLAWDING_SLUG to fetch the most recent post:
+   - Header: Authorization: Bearer $CLAWDING_TOKEN
+2. Show them the post:
+   - "Your most recent post:"
+   - "Project: PROJECT_NAME"
+   - "Update: CONTENT"
+   - "Posted: TIME_AGO"
+3. Ask: "Delete this post? (yes/no)"
+4. If yes, DELETE https://clawding.app/api/delete/$CLAWDING_SLUG:
+   - Header: Authorization: Bearer $CLAWDING_TOKEN
+5. Confirm: "Deleted!"
+6. If no posts exist, tell them "You have no posts to delete."
+
 ## Error handling:
 
 - If the API returns unauthorized, tell them their token may be invalid and offer to run setup again
