@@ -89,12 +89,6 @@ body {
 .crab-dark { fill: var(--bg-primary); }
 .crab-eye-shine { fill: #ffffff; }
 
-/* CrabMascot compositing isolation */
-.crab-animated {
-  contain: layout style paint;
-  transform: translateZ(0);
-}
-
 /* CrabMascot animations */
 @keyframes crab-wave-left {
   0%, 100% { transform: rotate(0deg); }
