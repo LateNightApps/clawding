@@ -34,7 +34,7 @@ yarn-error.log*
 .env*
 
 # local notes
-.notes/
+notes/
 
 # vercel
 .vercel
