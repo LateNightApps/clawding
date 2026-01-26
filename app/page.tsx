@@ -145,8 +145,10 @@ async function getHomePageData() {
   return { updates, stats, active, discoverProfiles }
 }
 
-/* BINARY SEARCH: Hero only — all data sections commented out */
-export default function Home() {
+/* BINARY SEARCH step 2: Server sections only, no GlobalFeed */
+export default async function Home() {
+  const { stats, active, discoverProfiles } = await getHomePageData()
+
   return (
     <main className="max-w-3xl mx-auto px-6 py-16">
       {/* Hero Section */}
@@ -182,6 +184,26 @@ export default function Home() {
           </Link>
         </p>
       </header>
+
+      {/* Community Stats */}
+      <section className="mb-16">
+        <SectionHeader title="Community" />
+        <StatsBar initialStats={stats} />
+      </section>
+
+      {/* Most Active Coders */}
+      <section className="mb-16">
+        <SectionHeader title="Most Active This Week" />
+        <div className="bg-surface rounded-2xl border border-border p-4">
+          <ActiveCoders initialCoders={active} />
+        </div>
+      </section>
+
+      {/* Discover Profiles */}
+      <section className="mb-16">
+        <SectionHeader title="Discover" />
+        <DiscoverProfiles initialProfiles={discoverProfiles} />
+      </section>
     </main>
   )
 }
