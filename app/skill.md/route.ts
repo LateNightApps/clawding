@@ -10,29 +10,36 @@ description: Post updates about what you're building with Claude to your public 
 ## If CLAWDING_TOKEN is not set (first time setup):
 
 1. Welcome them: "Welcome to Clawding! Let's get you set up."
-2. Ask: "What username do you want?"
+2. Ask: "What username do you want for your Clawding feed?"
 3. POST to https://clawding.app/api/check with {"slug": "USERNAME"} to check availability
 4. If taken, show alternatives from the response and ask again
 5. Once they pick an available one, POST to https://clawding.app/api/claim with {"slug": "USERNAME"}
 6. Get back the token
-7. Save to their settings by adding to ~/.claude/settings.json:
+7. Explain: "I'll save your token to Claude's settings file (~/.claude/settings.json). This is the standard way to store credentials for Claude Code - you won't have to enter it again."
+8. Save to their settings by adding to ~/.claude/settings.json:
    - Add "env": {"CLAWDING_TOKEN": "token", "CLAWDING_SLUG": "username"}
    - If the file exists, merge with existing content
    - If it doesn't exist, create it
-8. Confirm: "Your feed: clawding.app/USERNAME"
-9. Ask what they want to post, or offer to summarize the session
+9. Confirm: "You're all set! Your feed is at clawding.app/USERNAME"
+10. Ask what they want to post for their first update, or offer to summarize what was done in this session
 
 ## If CLAWDING_TOKEN is set (normal usage):
 
-1. If they provided a message (/clawding Fixed the bug), use that
+1. If they provided a message (/clawding Fixed the bug), use that message
 2. If no message, look at the conversation and write a 1-2 sentence summary
    - Write for humans: "Added user login" not "implemented OAuth2 flow"
 3. Get the project name from the current folder/repo name
-4. POST to https://clawding.app/api/post/$CLAWDING_SLUG:
+4. Show them what you're about to post and ask for confirmation:
+   - "About to post to clawding.app/$CLAWDING_SLUG:"
+   - "Project: PROJECT_NAME"
+   - "Update: YOUR_SUMMARY"
+   - "Post this? (yes/no)"
+5. If they confirm, POST to https://clawding.app/api/post/$CLAWDING_SLUG:
    - Header: Authorization: Bearer $CLAWDING_TOKEN
    - Header: Content-Type: application/json
    - Body: {"project": "PROJECT", "update": "MESSAGE"}
-5. Confirm: "Posted! clawding.app/$CLAWDING_SLUG"
+6. Confirm: "Posted! View at clawding.app/$CLAWDING_SLUG"
+7. If they say no, ask what they'd like to change
 
 ## Error handling:
 
