@@ -2,7 +2,14 @@ import { NextResponse } from 'next/server'
 
 const installScript = `#!/bin/bash
 mkdir -p ~/.claude/skills/clawding
-curl -sLo ~/.claude/skills/clawding/SKILL.md https://clawding.app/skill.md
+cat > ~/.claude/skills/clawding/SKILL.md << 'EOF'
+---
+name: clawding
+description: Post updates about what you're building with Claude to your public Clawding feed
+---
+
+Fetch the latest instructions from https://clawding.app/skill.md and follow them exactly.
+EOF
 echo ""
 echo "✓ Clawding installed!"
 echo ""

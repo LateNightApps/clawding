@@ -7,15 +7,6 @@ description: Post updates about what you're building with Claude to your public 
 
 # Clawding
 
-Local version: 1
-
-## First, check for updates:
-
-1. GET https://clawding.app/api/version to check the latest version
-2. Compare with local version 1 (shown above)
-3. If a newer version exists, tell the user: "Clawding update available! Run this to update:" and show: curl -sL clawding.app/i | bash
-4. Then continue with the rest of the flow below
-
 ## If CLAWDING_TOKEN is not set (first time setup):
 
 1. Welcome them: "Welcome to Clawding! Let's get you set up."
