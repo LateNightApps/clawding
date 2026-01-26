@@ -153,7 +153,7 @@ export default async function Home() {
       {/* Hero Section */}
       <header className="mb-16 text-center">
         <div className="mb-4 flex justify-center">
-          <CrabMascot size={140} animated={false} />
+          <CrabMascot size={140} />
         </div>
 
         <h1 className="font-display text-5xl md:text-6xl font-bold mb-6 tracking-tight">
