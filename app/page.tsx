@@ -145,9 +145,9 @@ async function getHomePageData() {
   return { updates, stats, active, discoverProfiles }
 }
 
-/* BINARY SEARCH step 2: Server sections only, no GlobalFeed */
+/* BINARY SEARCH step 3: Adding GlobalFeed back to confirm */
 export default async function Home() {
-  const { stats, active, discoverProfiles } = await getHomePageData()
+  const { updates, stats, active, discoverProfiles } = await getHomePageData()
 
   return (
     <main className="max-w-3xl mx-auto px-6 py-16">
@@ -189,6 +189,22 @@ export default async function Home() {
       <section className="mb-16">
         <SectionHeader title="Community" />
         <StatsBar initialStats={stats} />
+      </section>
+
+      {/* Recent Updates */}
+      <section className="mb-16">
+        <SectionHeader title="Recent Updates" />
+        <div className="bg-surface rounded-2xl border border-border p-6">
+          <GlobalFeed initialUpdates={updates} />
+          <div className="text-center pt-4 border-t border-border mt-2">
+            <Link
+              href="/feed"
+              className="text-coral hover:text-coral-bright text-sm font-medium transition-colors"
+            >
+              View all updates &rarr;
+            </Link>
+          </div>
+        </div>
       </section>
 
       {/* Most Active Coders */}
