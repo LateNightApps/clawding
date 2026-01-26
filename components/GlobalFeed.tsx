@@ -34,15 +34,15 @@ export function GlobalFeed() {
 
   if (loading) {
     return (
-      <div className="text-zinc-500 text-center py-8">
-        Loading updates...
+      <div className="text-[var(--text-muted)] text-center py-12">
+        <div className="inline-block animate-pulse">Loading updates...</div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="text-red-500 text-center py-8">
+      <div className="text-[var(--accent-coral)] text-center py-12">
         Failed to load updates. Please try again later.
       </div>
     )
@@ -50,14 +50,15 @@ export function GlobalFeed() {
 
   if (updates.length === 0) {
     return (
-      <div className="text-zinc-500 text-center py-8">
-        No updates yet. Be the first to post!
+      <div className="text-[var(--text-muted)] text-center py-12">
+        <p className="mb-2">No updates yet.</p>
+        <p className="text-[var(--accent-cyan)]">Be the first to post!</p>
       </div>
     )
   }
 
   return (
-    <div>
+    <div className="divide-y divide-[var(--border-subtle)]">
       {updates.map((update) => (
         <UpdateCard
           key={update.id}

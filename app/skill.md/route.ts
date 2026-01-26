@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 const skillFile = `---
 name: clawding
-description: Post updates about what you're building with Claude to your public Clawding feed
+description: Post updates about what you're coding with Claude to your public Clawding feed
 ---
 
 # Clawding

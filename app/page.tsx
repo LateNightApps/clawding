@@ -1,28 +1,59 @@
 import { InstallCommand } from '@/components/InstallCommand'
 import { GlobalFeed } from '@/components/GlobalFeed'
+import { CrabMascot } from '@/components/CrabMascot'
 
 export default function Home() {
   return (
-    <main className="max-w-2xl mx-auto px-4 py-12">
-      <header className="mb-12 text-center">
-        <h1 className="text-4xl font-bold mb-4">
-          <span className="text-orange-500">Clawding</span>
+    <main className="max-w-3xl mx-auto px-6 py-16">
+      {/* Hero Section */}
+      <header className="mb-20 text-center">
+        <div className="mb-8 flex justify-center">
+          <CrabMascot size={140} />
+        </div>
+
+        <h1 className="font-display text-5xl md:text-6xl font-bold mb-6 tracking-tight">
+          <span className="text-gradient">Clawding</span>
         </h1>
-        <p className="text-xl text-zinc-400 mb-8">
-          What are you building with Claude?
+
+        <p className="text-xl md:text-2xl text-[var(--text-secondary)] mb-10 max-w-lg mx-auto leading-relaxed">
+          What are you coding with Claude?
         </p>
-        <InstallCommand />
-        <p className="text-sm text-zinc-500 mt-4">
-          Then run <code className="text-orange-500/80">/clawding</code> in Claude Code
+
+        <div className="max-w-xl mx-auto">
+          <InstallCommand />
+        </div>
+
+        <p className="text-[var(--text-muted)] mt-6 text-sm">
+          Then run{' '}
+          <code className="text-[var(--accent-coral)] bg-[var(--bg-secondary)] px-2 py-1 rounded font-mono text-sm">
+            /clawding
+          </code>
+          {' '}in Claude Code
         </p>
       </header>
 
+      {/* Feed Section */}
       <section>
-        <h2 className="text-lg font-semibold text-zinc-300 mb-4 border-b border-zinc-800 pb-2">
-          Recent Updates
-        </h2>
-        <GlobalFeed />
+        <div className="flex items-center gap-3 mb-8">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-subtle)] to-transparent" />
+          <h2 className="font-display text-lg font-semibold text-[var(--text-primary)] px-4">
+            Recent Updates
+          </h2>
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-subtle)] to-transparent" />
+        </div>
+
+        <div className="bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-subtle)] p-6">
+          <GlobalFeed />
+        </div>
       </section>
+
+      {/* Footer */}
+      <footer className="mt-20 text-center text-[var(--text-muted)] text-sm">
+        <p>
+          Built with Claude{' '}
+          <span className="text-[var(--accent-coral)]">&#x2665;</span>
+        </p>
+      </footer>
     </main>
   )
 }

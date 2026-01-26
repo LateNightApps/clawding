@@ -13,13 +13,20 @@ export function InstallCommand() {
   }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 flex items-center justify-between gap-4">
-      <code className="text-orange-500 font-mono text-sm sm:text-base">
-        {command}
-      </code>
+    <div className="bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-xl p-5 flex items-center justify-between gap-4 transition-all duration-300 hover:border-[var(--border-accent)] hover:glow-coral">
+      <div className="flex items-center gap-3">
+        <span className="text-[var(--accent-cyan)] text-lg">$</span>
+        <code className="text-[var(--text-primary)] font-mono text-sm sm:text-base">
+          {command}
+        </code>
+      </div>
       <button
         onClick={copy}
-        className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded text-sm text-zinc-300 transition-colors shrink-0"
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shrink-0 ${
+          copied
+            ? 'bg-[var(--accent-cyan)] text-[var(--bg-primary)]'
+            : 'bg-[var(--accent-coral)] hover:bg-[var(--accent-coral-bright)] text-[var(--bg-primary)]'
+        }`}
       >
         {copied ? 'Copied!' : 'Copy'}
       </button>

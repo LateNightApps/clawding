@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Clawding is a "build in public" feed for people coding with Claude. One install command, then `/clawding` handles everything - setup, claiming your username, and posting updates about what you're building with Claude.
+Clawding is a "code in public" feed for people coding with Claude. One install command, then `/clawding` handles everything - setup, claiming your username, and posting updates about what you're coding with Claude.
 
 ## Tech Stack
 
@@ -100,7 +100,7 @@ echo "  Run /clawding in Claude Code to get started."
 ```markdown
 ---
 name: clawding
-description: Post updates about what you're building with Claude to your public Clawding feed
+description: Post updates about what you're coding with Claude to your public Clawding feed
 ---
 
 # Clawding
@@ -303,7 +303,7 @@ Limit 100, paginate later.
 
 ### / (Home)
 
-- Hero: "What are you building with Claude?"
+- Hero: "What are you coding with Claude?"
 - Show install command prominently
 - Global feed of recent updates below
 - Feels alive - relative timestamps ("2 hours ago")
