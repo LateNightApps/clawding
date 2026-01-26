@@ -79,7 +79,6 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  filter: drop-shadow(0 0 30px rgba(255, 107, 107, 0.35));
 }
 
 /* CrabMascot fills */
@@ -89,6 +88,12 @@ body {
 .crab-cheek { fill: var(--accent-coral-bright); }
 .crab-dark { fill: var(--bg-primary); }
 .crab-eye-shine { fill: #ffffff; }
+
+/* CrabMascot compositing isolation */
+.crab-animated {
+  contain: layout style paint;
+  will-change: contents;
+}
 
 /* CrabMascot animations */
 @keyframes crab-wave-left {
@@ -109,21 +114,25 @@ body {
 .crab-animated .claw-left {
   animation: crab-wave-left 2s ease-in-out infinite;
   transform-origin: 35px 50px;
+  will-change: transform;
 }
 
 .crab-animated .claw-right {
   animation: crab-wave-right 2s ease-in-out infinite;
   transform-origin: 85px 50px;
+  will-change: transform;
 }
 
 .crab-animated .eye-left {
   animation: crab-blink 4s ease-in-out infinite;
   transform-origin: 48px 52px;
+  will-change: transform;
 }
 
 .crab-animated .eye-right {
   animation: crab-blink 4s ease-in-out infinite;
   transform-origin: 72px 52px;
+  will-change: transform;
 }
 
 .glow-coral {
