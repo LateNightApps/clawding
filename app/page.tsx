@@ -1,12 +1,12 @@
 import { supabase } from '@/lib/supabase'
 import { InstallCommand } from '@/components/InstallCommand'
-import { GlobalFeed } from '@/components/GlobalFeed'
+import { UpdateCard } from '@/components/UpdateCard'
 import { CrabMascot } from '@/components/CrabMascot'
 import { StatsBar } from '@/components/StatsBar'
 import { ActiveCoders } from '@/components/ActiveCoders'
 import { DiscoverProfiles } from '@/components/DiscoverProfiles'
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
 
 function SectionHeader({ title }: { title: string }) {
   return (
@@ -193,7 +193,18 @@ export default async function Home() {
       <section className="mb-16">
         <SectionHeader title="Recent Updates" />
         <div className="bg-surface rounded-2xl border border-border p-6">
-          <GlobalFeed initialUpdates={updates} />
+          <div className="divide-y divide-border">
+            {updates.map(u => (
+              <UpdateCard
+                key={u.id}
+                slug={u.slug}
+                project={u.project}
+                content={u.content}
+                created_at={u.created_at}
+                showSlug
+              />
+            ))}
+          </div>
           <div className="text-center pt-4 border-t border-border mt-2">
             <a
               href="/feed"
