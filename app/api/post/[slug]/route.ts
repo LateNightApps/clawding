@@ -28,7 +28,9 @@ export async function POST(
     }
 
     // Verify token
+    console.log('Verifying token for feed:', feed.id, 'hash exists:', !!feed.token_hash)
     const valid = await verifyToken(token, feed.token_hash)
+    console.log('Token valid:', valid)
     if (!valid) {
       return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 })
     }
@@ -76,7 +78,8 @@ export async function POST(
       .eq('id', feed.id)
 
     return NextResponse.json({ success: true })
-  } catch {
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+  } catch (err) {
+    console.error('Post error:', err)
+    return NextResponse.json({ success: false, error: 'Internal server error', details: String(err) }, { status: 500 })
   }
 }
