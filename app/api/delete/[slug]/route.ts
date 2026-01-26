@@ -1,37 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { verifyToken } from '@/lib/utils'
 import { errorResponse, ApiError } from '@/lib/api-utils'
-
-async function authenticateRequest(
-  request: NextRequest,
-  slug: string
-): Promise<{ feedId: string }> {
-  const authHeader = request.headers.get('authorization')
-
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw new ApiError('Unauthorized', 401, 'unauthorized')
-  }
-
-  const token = authHeader.slice(7)
-
-  const { data: feed } = await supabase
-    .from('feeds')
-    .select('id, token_hash')
-    .eq('slug', slug)
-    .single()
-
-  if (!feed) {
-    throw new ApiError('Feed not found', 404, 'not_found')
-  }
-
-  const valid = await verifyToken(token, feed.token_hash)
-  if (!valid) {
-    throw new ApiError('Unauthorized', 401, 'unauthorized')
-  }
-
-  return { feedId: feed.id }
-}
+import { authenticateRequest } from '@/lib/auth'
 
 export async function DELETE(
   request: NextRequest,

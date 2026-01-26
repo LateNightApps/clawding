@@ -1,13 +1,29 @@
+import Link from 'next/link'
 import { InstallCommand } from '@/components/InstallCommand'
 import { GlobalFeed } from '@/components/GlobalFeed'
 import { CrabMascot } from '@/components/CrabMascot'
+import { StatsBar } from '@/components/StatsBar'
+import { ActiveCoders } from '@/components/ActiveCoders'
+import { DiscoverProfiles } from '@/components/DiscoverProfiles'
+
+function SectionHeader({ title }: { title: string }) {
+  return (
+    <div className="flex items-center gap-3 mb-6">
+      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+      <h2 className="font-display text-lg font-semibold text-primary px-4">
+        {title}
+      </h2>
+      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+    </div>
+  )
+}
 
 export default function Home() {
   return (
     <main className="max-w-3xl mx-auto px-6 py-16">
       {/* Hero Section */}
-      <header className="mb-20 text-center">
-        <div className="mb-8 flex justify-center">
+      <header className="mb-16 text-center">
+        <div className="mb-4 flex justify-center">
           <CrabMascot size={140} />
         </div>
 
@@ -15,7 +31,7 @@ export default function Home() {
           <span className="text-gradient">Clawding</span>
         </h1>
 
-        <p className="text-xl md:text-2xl text-[var(--text-secondary)] mb-10 max-w-lg mx-auto leading-relaxed">
+        <p className="text-xl md:text-2xl text-secondary mb-10 max-w-lg mx-auto leading-relaxed">
           What are you coding with Claude?
         </p>
 
@@ -23,37 +39,50 @@ export default function Home() {
           <InstallCommand />
         </div>
 
-        <p className="text-[var(--text-muted)] mt-6 text-sm">
+        <p className="text-muted mt-6 text-sm">
           Then run{' '}
-          <code className="text-[var(--accent-coral)] bg-[var(--bg-secondary)] px-2 py-1 rounded font-mono text-sm">
+          <code className="text-coral bg-surface px-2 py-1 rounded font-mono text-sm">
             /clawding
           </code>
           {' '}in Claude Code
         </p>
       </header>
 
-      {/* Feed Section */}
-      <section>
-        <div className="flex items-center gap-3 mb-8">
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-subtle)] to-transparent" />
-          <h2 className="font-display text-lg font-semibold text-[var(--text-primary)] px-4">
-            Recent Updates
-          </h2>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-subtle)] to-transparent" />
-        </div>
+      {/* Community Stats */}
+      <section className="mb-16">
+        <SectionHeader title="Community" />
+        <StatsBar />
+      </section>
 
-        <div className="bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-subtle)] p-6">
+      {/* Recent Updates */}
+      <section className="mb-16">
+        <SectionHeader title="Recent Updates" />
+        <div className="bg-surface rounded-2xl border border-border p-6">
           <GlobalFeed />
+          <div className="text-center pt-4 border-t border-border mt-2">
+            <Link
+              href="/feed"
+              className="text-coral hover:text-coral-bright text-sm font-medium transition-colors"
+            >
+              View all updates &rarr;
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="mt-20 text-center text-[var(--text-muted)] text-sm">
-        <p>
-          Built with Claude{' '}
-          <span className="text-[var(--accent-coral)]">&#x2665;</span>
-        </p>
-      </footer>
+      {/* Most Active Coders */}
+      <section className="mb-16">
+        <SectionHeader title="Most Active This Week" />
+        <div className="bg-surface rounded-2xl border border-border p-4">
+          <ActiveCoders />
+        </div>
+      </section>
+
+      {/* Discover Profiles */}
+      <section className="mb-16">
+        <SectionHeader title="Discover" />
+        <DiscoverProfiles />
+      </section>
     </main>
   )
 }

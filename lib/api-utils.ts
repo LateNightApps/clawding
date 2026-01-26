@@ -44,14 +44,30 @@ export function errorResponse(error: unknown): NextResponse {
 }
 
 // Simple in-memory rate limiter
-// In production, use Redis or similar for distributed rate limiting
+// Note: ephemeral in serverless - works within warm instances only.
+// For distributed rate limiting at scale, swap for Redis/Upstash.
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>()
+let lastCleanup = Date.now()
+
+function cleanupExpired() {
+  const now = Date.now()
+  // Lazy cleanup: only run if 60s+ since last cleanup
+  if (now - lastCleanup < 60000) return
+  lastCleanup = now
+  for (const [key, record] of rateLimitStore.entries()) {
+    if (now > record.resetAt) {
+      rateLimitStore.delete(key)
+    }
+  }
+}
 
 export function rateLimit(
   key: string,
   limit: number,
   windowMs: number
 ): { allowed: boolean; remaining: number } {
+  cleanupExpired()
+
   const now = Date.now()
   const record = rateLimitStore.get(key)
 
@@ -75,13 +91,3 @@ export function getClientIp(request: NextRequest): string {
     'unknown'
   )
 }
-
-// Cleanup old rate limit entries periodically
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, record] of rateLimitStore.entries()) {
-    if (now > record.resetAt) {
-      rateLimitStore.delete(key)
-    }
-  }
-}, 60000) // Clean up every minute

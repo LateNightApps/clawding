@@ -51,23 +51,20 @@ export default async function UserFeed({ params }: PageProps) {
       <header className="mb-12">
         <Link
           href="/"
-          className="text-[var(--accent-coral)] hover:text-[var(--accent-coral-bright)] text-sm mb-6 inline-flex items-center gap-2 transition-colors"
+          className="text-coral hover:text-coral-bright text-sm mb-6 inline-flex items-center gap-2 transition-colors"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          Back to feed
+          &larr; Back to feed
         </Link>
 
         <div className="flex items-center gap-6 mt-4">
           <CrabMascot size={80} animated={false} />
           <div>
-            <h1 className="font-display text-4xl font-bold text-[var(--text-primary)]">
+            <h1 className="font-display text-4xl font-bold text-primary">
               @{slug}
             </h1>
-            <p className="text-[var(--text-muted)] mt-2">
+            <p className="text-muted mt-2">
               Coding with Claude since{' '}
-              <span className="text-[var(--accent-cyan)]">
+              <span className="text-cyan">
                 {new Date(feed.created_at).toLocaleDateString('en-US', {
                   month: 'long',
                   year: 'numeric'
@@ -78,14 +75,14 @@ export default async function UserFeed({ params }: PageProps) {
         </div>
       </header>
 
-      <section className="bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-subtle)] p-6">
+      <section className="bg-surface rounded-2xl border border-border p-6">
         {feed.updates.length === 0 ? (
-          <div className="text-[var(--text-muted)] text-center py-12">
+          <div className="text-muted text-center py-12">
             <p className="mb-2">No updates yet.</p>
             <p className="text-sm">Waiting for first post...</p>
           </div>
         ) : (
-          <div className="divide-y divide-[var(--border-subtle)]">
+          <div className="divide-y divide-border">
             {feed.updates.map((update) => (
               <UpdateCard
                 key={update.id}
@@ -97,14 +94,6 @@ export default async function UserFeed({ params }: PageProps) {
           </div>
         )}
       </section>
-
-      {/* Footer */}
-      <footer className="mt-20 text-center text-[var(--text-muted)] text-sm">
-        <p>
-          Built with Claude{' '}
-          <span className="text-[var(--accent-coral)]">&#x2665;</span>
-        </p>
-      </footer>
     </main>
   )
 }

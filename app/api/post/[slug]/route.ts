@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { verifyToken, sanitizeContent, sanitizeProjectName } from '@/lib/utils'
+import { sanitizeContent, sanitizeProjectName } from '@/lib/utils'
 import { parseJsonBody, errorResponse, ApiError } from '@/lib/api-utils'
+import { authenticateRequest } from '@/lib/auth'
 
 export async function POST(
   request: NextRequest,
@@ -9,37 +10,14 @@ export async function POST(
 ) {
   try {
     const { slug } = await params
-    const authHeader = request.headers.get('authorization')
-
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw new ApiError('Unauthorized', 401, 'unauthorized')
-    }
-
-    const token = authHeader.slice(7)
-
-    // Find feed
-    const { data: feed } = await supabase
-      .from('feeds')
-      .select('id, token_hash')
-      .eq('slug', slug)
-      .single()
-
-    if (!feed) {
-      throw new ApiError('Feed not found', 404, 'not_found')
-    }
-
-    // Verify token
-    const valid = await verifyToken(token, feed.token_hash)
-    if (!valid) {
-      throw new ApiError('Unauthorized', 401, 'unauthorized')
-    }
+    const { feedId } = await authenticateRequest(request, slug)
 
     // Rate limit check: 50 posts per day
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     const { count } = await supabase
       .from('updates')
       .select('*', { count: 'exact', head: true })
-      .eq('feed_id', feed.id)
+      .eq('feed_id', feedId)
       .gte('created_at', oneDayAgo)
 
     if (count && count >= 50) {
@@ -68,7 +46,7 @@ export async function POST(
     const { error } = await supabase
       .from('updates')
       .insert({
-        feed_id: feed.id,
+        feed_id: feedId,
         project_name: sanitizedProject,
         content: sanitizedUpdate
       })
@@ -82,7 +60,7 @@ export async function POST(
     await supabase
       .from('feeds')
       .update({ last_post_at: new Date().toISOString() })
-      .eq('id', feed.id)
+      .eq('id', feedId)
 
     return NextResponse.json({ success: true })
   } catch (error) {

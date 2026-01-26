@@ -13,8 +13,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen">
-        {children}
+      <body className="min-h-screen flex flex-col">
+        <div className="flex-1">
+          {children}
+        </div>
+        <footer className="py-8 text-center text-muted text-sm">
+          <p>
+            Built with Claude{' '}
+            <span className="text-coral">&#x2665;</span>
+          </p>
+        </footer>
       </body>
     </html>
   );

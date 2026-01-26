@@ -13,10 +13,10 @@ export function InstallCommand() {
   }
 
   return (
-    <div className="bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-xl p-5 flex items-center justify-between gap-4 transition-all duration-300 hover:border-[var(--border-accent)] hover:glow-coral">
+    <div className="bg-card border border-border rounded-xl p-5 flex items-center justify-between gap-4 transition-all duration-300 hover:border-border-accent hover:glow-coral">
       <div className="flex items-center gap-3">
-        <span className="text-[var(--accent-cyan)] text-lg">$</span>
-        <code className="text-[var(--text-primary)] font-mono text-sm sm:text-base">
+        <span className="text-cyan text-lg">$</span>
+        <code className="text-primary font-mono text-sm sm:text-base">
           {command}
         </code>
       </div>
@@ -24,8 +24,8 @@ export function InstallCommand() {
         onClick={copy}
         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shrink-0 ${
           copied
-            ? 'bg-[var(--accent-cyan)] text-[var(--bg-primary)]'
-            : 'bg-[var(--accent-coral)] hover:bg-[var(--accent-coral-bright)] text-[var(--bg-primary)]'
+            ? 'bg-cyan text-background'
+            : 'bg-coral hover:bg-coral-bright text-background'
         }`}
       >
         {copied ? 'Copied!' : 'Copy'}

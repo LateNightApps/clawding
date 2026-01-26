@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { UpdateCard } from './UpdateCard'
+import { useRealtimeFeed } from '@/lib/use-realtime-feed'
 
 interface Update {
   id: string
@@ -15,8 +16,10 @@ export function GlobalFeed() {
   const [updates, setUpdates] = useState<Update[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [hasNewPosts, setHasNewPosts] = useState(false)
+  const newPostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
+  const fetchUpdates = useCallback((isRealtime = false) => {
     fetch('/api/global')
       .then(res => {
         if (!res.ok) throw new Error('Failed to load feed')
@@ -25,6 +28,12 @@ export function GlobalFeed() {
       .then(data => {
         setUpdates(data.updates || [])
         setLoading(false)
+        setError(null)
+        if (isRealtime) {
+          setHasNewPosts(true)
+          if (newPostTimerRef.current) clearTimeout(newPostTimerRef.current)
+          newPostTimerRef.current = setTimeout(() => setHasNewPosts(false), 5000)
+        }
       })
       .catch((err) => {
         setError(err.message)
@@ -32,9 +41,23 @@ export function GlobalFeed() {
       })
   }, [])
 
+  // Initial fetch
+  useEffect(() => {
+    fetchUpdates()
+    return () => {
+      if (newPostTimerRef.current) clearTimeout(newPostTimerRef.current)
+    }
+  }, [fetchUpdates])
+
+  // Subscribe to realtime updates (throttled to max once per 3s)
+  useRealtimeFeed({
+    throttleMs: 3000,
+    onNewData: () => fetchUpdates(true),
+  })
+
   if (loading) {
     return (
-      <div className="text-[var(--text-muted)] text-center py-12">
+      <div className="text-muted text-center py-12">
         <div className="inline-block animate-pulse">Loading updates...</div>
       </div>
     )
@@ -42,7 +65,7 @@ export function GlobalFeed() {
 
   if (error) {
     return (
-      <div className="text-[var(--accent-coral)] text-center py-12">
+      <div className="text-coral text-center py-12">
         Failed to load updates. Please try again later.
       </div>
     )
@@ -50,25 +73,32 @@ export function GlobalFeed() {
 
   if (updates.length === 0) {
     return (
-      <div className="text-[var(--text-muted)] text-center py-12">
+      <div className="text-muted text-center py-12">
         <p className="mb-2">No updates yet.</p>
-        <p className="text-[var(--accent-cyan)]">Be the first to post!</p>
+        <p className="text-cyan">Be the first to post!</p>
       </div>
     )
   }
 
   return (
-    <div className="divide-y divide-[var(--border-subtle)]">
-      {updates.map((update) => (
-        <UpdateCard
-          key={update.id}
-          slug={update.slug}
-          project={update.project}
-          content={update.content}
-          created_at={update.created_at}
-          showSlug
-        />
-      ))}
+    <div>
+      {hasNewPosts && (
+        <div className="text-center py-2 mb-4 text-sm text-cyan animate-pulse">
+          New posts just arrived
+        </div>
+      )}
+      <div className="divide-y divide-border">
+        {updates.map((update) => (
+          <UpdateCard
+            key={update.id}
+            slug={update.slug}
+            project={update.project}
+            content={update.content}
+            created_at={update.created_at}
+            showSlug
+          />
+        ))}
+      </div>
     </div>
   )
 }

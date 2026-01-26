@@ -13,6 +13,7 @@
   --text-muted: #5a6580;
   --accent-coral: #ff6b6b;
   --accent-coral-bright: #ff4d4d;
+  --accent-coral-light: #ff8585;
   --accent-cyan: #00e5cc;
   --accent-cyan-dim: #14b8a6;
   --border-subtle: rgba(136, 146, 176, 0.15);
@@ -29,6 +30,25 @@
   --color-foreground: var(--text-primary);
   --font-sans: var(--font-body);
   --font-mono: var(--font-mono);
+
+  /* Surface colors */
+  --color-surface: var(--bg-secondary);
+  --color-card: var(--bg-card);
+
+  /* Text colors */
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+
+  /* Accent colors */
+  --color-coral: var(--accent-coral);
+  --color-coral-bright: var(--accent-coral-bright);
+  --color-cyan: var(--accent-cyan);
+  --color-cyan-dim: var(--accent-cyan-dim);
+
+  /* Border colors */
+  --color-border: var(--border-subtle);
+  --color-border-accent: var(--border-accent);
 }
 
 * {

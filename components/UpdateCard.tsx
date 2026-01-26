@@ -15,24 +15,24 @@ export function UpdateCard({ slug, project, content, created_at, showSlug = fals
   const date = new Date(created_at)
 
   return (
-    <div className="py-5 border-b border-[var(--border-subtle)] last:border-0 transition-colors hover:bg-[var(--bg-card)]/50 -mx-2 px-2 rounded-lg">
+    <div className="py-5 transition-colors hover:bg-card/50 -mx-2 px-2 rounded-lg">
       <div className="flex items-center gap-2 text-sm mb-2">
         {showSlug && slug && (
           <>
             <Link
               href={`/${slug}`}
-              className="text-[var(--accent-coral)] hover:text-[var(--accent-coral-bright)] font-medium transition-colors"
+              className="text-coral hover:text-coral-bright font-medium transition-colors"
             >
               @{slug}
             </Link>
-            <span className="text-[var(--text-muted)]">/</span>
+            <span className="text-muted">/</span>
           </>
         )}
-        <span className="text-[var(--accent-cyan)] font-medium">{project}</span>
-        <span className="text-[var(--text-muted)]">·</span>
-        <span className="text-[var(--text-muted)]">{timeAgo(date)}</span>
+        <span className="text-cyan font-medium">{project}</span>
+        <span className="text-muted">&middot;</span>
+        <span className="text-muted">{timeAgo(date)}</span>
       </div>
-      <p className="text-[var(--text-primary)] leading-relaxed">{content}</p>
+      <p className="text-primary leading-relaxed">{content}</p>
     </div>
   )
 }
