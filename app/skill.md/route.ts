@@ -3,9 +3,17 @@ import { NextResponse } from 'next/server'
 const skillFile = `---
 name: clawding
 description: Post updates about what you're building with Claude to your public Clawding feed
+version: 1
 ---
 
 # Clawding
+
+## First, check for updates:
+
+1. GET https://clawding.app/api/version to check the latest version
+2. Compare with version 1 (this file's version, shown above in the header)
+3. If a newer version exists, tell the user: "Clawding update available! Run this to update:" and show them: curl -sL clawding.app/i | bash
+4. Then continue with the rest of the flow below
 
 ## If CLAWDING_TOKEN is not set (first time setup):
 
