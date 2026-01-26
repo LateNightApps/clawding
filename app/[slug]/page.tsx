@@ -21,7 +21,7 @@ const PAGE_SIZE = 50
 async function getFeed(slug: string) {
   const { data: feed } = await supabase
     .from('feeds')
-    .select('id, created_at')
+    .select('id, created_at, x_handle, website_url')
     .eq('slug', slug)
     .single()
 
@@ -38,6 +38,8 @@ async function getFeed(slug: string) {
     slug,
     feedId: feed.id,
     created_at: feed.created_at,
+    x_handle: (feed.x_handle as string | null) ?? null,
+    website_url: (feed.website_url as string | null) ?? null,
     updates: (updates || []) as Update[],
     totalCount: count ?? 0,
   }
@@ -97,6 +99,31 @@ export default async function UserFeed({ params }: PageProps) {
             </span>
           )}
         </p>
+        {(feed.x_handle || feed.website_url) && (
+          <div className="flex items-center gap-4 mt-3">
+            {feed.x_handle && (
+              <a
+                href={`https://x.com/${feed.x_handle}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-secondary hover:text-primary text-sm transition-colors"
+              >
+                @{feed.x_handle}
+                <span className="text-muted ml-1">on X</span>
+              </a>
+            )}
+            {feed.website_url && (
+              <a
+                href={feed.website_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cyan hover:text-primary text-sm transition-colors"
+              >
+                {new URL(feed.website_url).hostname.replace('www.', '')}
+              </a>
+            )}
+          </div>
+        )}
       </header>
 
       <section className="bg-surface rounded-2xl border border-border p-6">

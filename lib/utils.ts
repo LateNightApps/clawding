@@ -18,7 +18,8 @@ const RESERVED_SLUGS = [
   'register', 'auth', 'oauth', 'callback', 'webhook', 'webhooks', 'feed',
   'feeds', 'global', 'check', 'claim', 'post', 'delete', 'update', 'updates',
   'user', 'users', 'profile', 'profiles', 'help', 'about', 'terms', 'privacy',
-  'static', 'assets', 'public', 'src', 'app', 'lib', 'components', 'health'
+  'static', 'assets', 'public', 'src', 'app', 'lib', 'components', 'health',
+  'guide', 'docs', 'blog'
 ]
 
 export function validateSlug(slug: string): { valid: boolean; error?: string } {
@@ -54,6 +55,45 @@ export function sanitizeProjectName(name: string): string {
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
     .trim()
     .slice(0, 100)
+}
+
+export function validateXHandle(handle: string): { valid: boolean; error?: string } {
+  if (!handle) {
+    return { valid: true }
+  }
+  const cleaned = handle.startsWith('@') ? handle.slice(1) : handle
+  if (cleaned.length === 0) {
+    return { valid: false, error: 'X handle cannot be empty' }
+  }
+  if (cleaned.length > 15) {
+    return { valid: false, error: 'X handle must be 15 characters or fewer' }
+  }
+  if (!/^[a-zA-Z0-9_]+$/.test(cleaned)) {
+    return { valid: false, error: 'X handle can only contain letters, numbers, and underscores' }
+  }
+  return { valid: true }
+}
+
+export function cleanXHandle(handle: string): string {
+  return handle.startsWith('@') ? handle.slice(1) : handle
+}
+
+export function validateWebsiteUrl(url: string): { valid: boolean; error?: string } {
+  if (!url) {
+    return { valid: true }
+  }
+  if (url.length > 200) {
+    return { valid: false, error: 'Website URL must be 200 characters or fewer' }
+  }
+  if (!url.startsWith('https://')) {
+    return { valid: false, error: 'Website URL must start with https://' }
+  }
+  try {
+    new URL(url)
+  } catch {
+    return { valid: false, error: 'Invalid URL format' }
+  }
+  return { valid: true }
 }
 
 export function generateSuggestions(slug: string): string[] {

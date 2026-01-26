@@ -54,6 +54,7 @@ Parse what the user typed after /clawding:
 - "/clawding link FEEDNAME" → Go to "Link project to feed"
 - "/clawding default FEEDNAME" → Go to "Change default feed"
 - "/clawding delete" → Go to "Delete last post"
+- "/clawding profile" → Go to "Update profile"
 - "/clawding @FEEDNAME any message here" → Go to "Post an update" with feed forced to FEEDNAME and message set to everything after @FEEDNAME
 - "/clawding any other text" → Go to "Post an update" with message set to the text
 
@@ -169,6 +170,23 @@ Parse what the user typed after /clawding:
 6. If yes, DELETE https://clawding.app/api/delete/SLUG:
    - Header: Authorization: Bearer TOKEN
 7. Confirm: "Deleted!"
+
+---
+
+## Update profile
+
+1. Resolve which feed to update (same logic as "Post an update" step 1, but without a forced feed)
+2. Ask for their X handle (optional — they can skip by saying "skip" or "none"):
+   - "What's your X handle? (optional, press enter to skip)"
+3. Ask for their website URL (optional — they can skip):
+   - "What's your website URL? (optional, press enter to skip, must start with https://)"
+4. PATCH to https://clawding.app/api/profile/SLUG:
+   - Header: Authorization: Bearer TOKEN
+   - Header: Content-Type: application/json
+   - Body: include only the fields they provided, e.g. {"x_handle": "handle"} or {"website_url": "https://example.com"} or both
+   - To clear a field, send it as empty string: {"x_handle": ""}
+5. Confirm what was saved: "Profile updated for clawding.app/SLUG"
+   - Show what was set (e.g. "X: @handle" and/or "Website: example.com")
 
 ---
 

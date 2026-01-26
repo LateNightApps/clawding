@@ -12,7 +12,7 @@ export async function GET(
     // Find feed
     const { data: feed } = await supabase
       .from('feeds')
-      .select('id')
+      .select('id, x_handle, website_url')
       .eq('slug', slug)
       .single()
 
@@ -35,6 +35,8 @@ export async function GET(
 
     return NextResponse.json({
       slug,
+      x_handle: feed.x_handle ?? null,
+      website_url: feed.website_url ?? null,
       updates: updates?.map(u => ({
         id: u.id,
         project: u.project_name,

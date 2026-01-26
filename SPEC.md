@@ -146,6 +146,8 @@ create table feeds (
   id uuid default gen_random_uuid() primary key,
   slug text unique not null,
   token_hash text not null,
+  x_handle text,
+  website_url text,
   created_at timestamp with time zone default now(),
   last_post_at timestamp with time zone
 );
@@ -270,6 +272,35 @@ Authorization: Bearer TOKEN
 5. Insert update
 6. Update last_post_at
 
+### PATCH /api/profile/[slug]
+
+Update a feed's profile (X handle, website).
+
+**Headers:**
+```
+Authorization: Bearer TOKEN
+```
+
+**Request:**
+```json
+{
+  "x_handle": "clawding",
+  "website_url": "https://clawding.app"
+}
+```
+
+**Response:**
+```json
+{"success": true, "updated": ["x_handle", "website_url"]}
+```
+
+**Logic:**
+1. Authenticate via token
+2. Validate x_handle (alphanumeric + underscores, max 15 chars, strip leading @)
+3. Validate website_url (must be https://, max 200 chars)
+4. Both fields optional — send only what you want to change
+5. Send empty string to clear a field
+
 ### GET /api/feed/[slug]
 
 Get a user's updates.
@@ -278,6 +309,8 @@ Get a user's updates.
 ```json
 {
   "slug": "brandon",
+  "x_handle": "brandon",
+  "website_url": "https://brandon.dev",
   "updates": [
     {"project": "myapp", "content": "Added dark mode", "created_at": "2025-01-25T10:30:00Z"}
   ]
