@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
 :root {
+  /* Font fallbacks — next/font overrides these at runtime via className on html */
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
   /* Colors inspired by clawd.bot */
   --bg-primary: #050810;
   --bg-secondary: #0a0f1a;

@@ -15,6 +15,8 @@ export function CrabMascot({ size = 120, className = '', animated = true }: Crab
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      role="img"
+      aria-label="Clawding crab mascot"
     >
       <style>{`
         .crab-body { fill: var(--accent-coral); }

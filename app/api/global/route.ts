@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { errorResponse } from '@/lib/api-utils'
+import { errorResponse, ApiError } from '@/lib/api-utils'
 
 const DEFAULT_LIMIT = 10
 const MAX_LIMIT = 50
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching global feed:', error)
-      throw error
+      throw new ApiError('Failed to fetch global feed', 500, 'db_error')
     }
 
     const mapped = (updates as UpdateRow[] | null)?.map(u => {

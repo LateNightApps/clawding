@@ -1,6 +1,8 @@
 import type { MetadataRoute } from 'next'
 import { supabase } from '@/lib/supabase'
 
+export const dynamic = 'force-dynamic'
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { data: feeds } = await supabase
     .from('feeds')

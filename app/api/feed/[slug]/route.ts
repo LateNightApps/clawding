@@ -30,7 +30,7 @@ export async function GET(
 
     if (error) {
       console.error('Error fetching feed:', error)
-      throw error
+      throw new ApiError('Failed to fetch feed', 500, 'db_error')
     }
 
     return NextResponse.json({

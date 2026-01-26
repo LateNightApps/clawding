@@ -25,7 +25,7 @@ export async function PATCH(
       if (body.x_handle) {
         const validation = validateXHandle(body.x_handle)
         if (!validation.valid) {
-          throw new ApiError(validation.error!, 400, 'invalid_x_handle')
+          throw new ApiError(validation.error ?? 'Invalid X handle', 400, 'invalid_x_handle')
         }
         updates.x_handle = cleanXHandle(body.x_handle)
       } else {
@@ -37,7 +37,7 @@ export async function PATCH(
       if (body.website_url) {
         const validation = validateWebsiteUrl(body.website_url)
         if (!validation.valid) {
-          throw new ApiError(validation.error!, 400, 'invalid_website_url')
+          throw new ApiError(validation.error ?? 'Invalid website URL', 400, 'invalid_website_url')
         }
         updates.website_url = body.website_url
       } else {

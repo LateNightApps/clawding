@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { errorResponse } from '@/lib/api-utils'
+import { errorResponse, ApiError } from '@/lib/api-utils'
 
 interface DiscoverProfile {
   slug: string
@@ -16,7 +16,10 @@ export async function GET() {
       .from('feeds')
       .select('id, slug')
 
-    if (feedsError) throw feedsError
+    if (feedsError) {
+      console.error('Error fetching feeds for discover:', feedsError)
+      throw new ApiError('Failed to load profiles', 500, 'db_error')
+    }
     if (!feeds || feeds.length === 0) {
       return NextResponse.json({ profiles: [] })
     }
