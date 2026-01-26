@@ -1,6 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { verifyToken } from '@/lib/utils'
+import { errorResponse, ApiError } from '@/lib/api-utils'
+
+async function authenticateRequest(
+  request: NextRequest,
+  slug: string
+): Promise<{ feedId: string }> {
+  const authHeader = request.headers.get('authorization')
+
+  if (!authHeader?.startsWith('Bearer ')) {
+    throw new ApiError('Unauthorized', 401, 'unauthorized')
+  }
+
+  const token = authHeader.slice(7)
+
+  const { data: feed } = await supabase
+    .from('feeds')
+    .select('id, token_hash')
+    .eq('slug', slug)
+    .single()
+
+  if (!feed) {
+    throw new ApiError('Feed not found', 404, 'not_found')
+  }
+
+  const valid = await verifyToken(token, feed.token_hash)
+  if (!valid) {
+    throw new ApiError('Unauthorized', 401, 'unauthorized')
+  }
+
+  return { feedId: feed.id }
+}
 
 export async function DELETE(
   request: NextRequest,
@@ -8,42 +39,19 @@ export async function DELETE(
 ) {
   try {
     const { slug } = await params
-    const authHeader = request.headers.get('authorization')
-
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.slice(7)
-
-    // Find feed
-    const { data: feed } = await supabase
-      .from('feeds')
-      .select('id, token_hash')
-      .eq('slug', slug)
-      .single()
-
-    if (!feed) {
-      return NextResponse.json({ success: false, error: 'not_found' }, { status: 404 })
-    }
-
-    // Verify token
-    const valid = await verifyToken(token, feed.token_hash)
-    if (!valid) {
-      return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 })
-    }
+    const { feedId } = await authenticateRequest(request, slug)
 
     // Get most recent post
     const { data: lastPost } = await supabase
       .from('updates')
       .select('id, project_name, content, created_at')
-      .eq('feed_id', feed.id)
+      .eq('feed_id', feedId)
       .order('created_at', { ascending: false })
       .limit(1)
       .single()
 
     if (!lastPost) {
-      return NextResponse.json({ success: false, error: 'no_posts' }, { status: 404 })
+      throw new ApiError('No posts to delete', 404, 'no_posts')
     }
 
     // Delete it
@@ -53,7 +61,8 @@ export async function DELETE(
       .eq('id', lastPost.id)
 
     if (error) {
-      return NextResponse.json({ success: false, error: 'Failed to delete' }, { status: 500 })
+      console.error('Error deleting post:', error)
+      throw new ApiError('Failed to delete', 500, 'db_error')
     }
 
     return NextResponse.json({
@@ -64,8 +73,8 @@ export async function DELETE(
         created_at: lastPost.created_at
       }
     })
-  } catch {
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+  } catch (error) {
+    return errorResponse(error)
   }
 }
 
@@ -76,42 +85,19 @@ export async function GET(
 ) {
   try {
     const { slug } = await params
-    const authHeader = request.headers.get('authorization')
-
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.slice(7)
-
-    // Find feed
-    const { data: feed } = await supabase
-      .from('feeds')
-      .select('id, token_hash')
-      .eq('slug', slug)
-      .single()
-
-    if (!feed) {
-      return NextResponse.json({ success: false, error: 'not_found' }, { status: 404 })
-    }
-
-    // Verify token
-    const valid = await verifyToken(token, feed.token_hash)
-    if (!valid) {
-      return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 })
-    }
+    const { feedId } = await authenticateRequest(request, slug)
 
     // Get most recent post
     const { data: lastPost } = await supabase
       .from('updates')
       .select('id, project_name, content, created_at')
-      .eq('feed_id', feed.id)
+      .eq('feed_id', feedId)
       .order('created_at', { ascending: false })
       .limit(1)
       .single()
 
     if (!lastPost) {
-      return NextResponse.json({ success: false, error: 'no_posts' }, { status: 404 })
+      throw new ApiError('No posts found', 404, 'no_posts')
     }
 
     return NextResponse.json({
@@ -122,7 +108,7 @@ export async function GET(
         created_at: lastPost.created_at
       }
     })
-  } catch {
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+  } catch (error) {
+    return errorResponse(error)
   }
 }

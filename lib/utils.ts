@@ -1,12 +1,8 @@
 import bcrypt from 'bcryptjs'
+import { randomBytes } from 'crypto'
 
 export function generateToken(length: number = 32): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  let token = ''
-  for (let i = 0; i < length; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return token
+  return randomBytes(length).toString('base64url').slice(0, length)
 }
 
 export async function hashToken(token: string): Promise<string> {
@@ -16,6 +12,14 @@ export async function hashToken(token: string): Promise<string> {
 export async function verifyToken(token: string, hash: string): Promise<boolean> {
   return bcrypt.compare(token, hash)
 }
+
+const RESERVED_SLUGS = [
+  'api', 'admin', 'settings', 'i', 'skill', 'login', 'logout', 'signup',
+  'register', 'auth', 'oauth', 'callback', 'webhook', 'webhooks', 'feed',
+  'feeds', 'global', 'check', 'claim', 'post', 'delete', 'update', 'updates',
+  'user', 'users', 'profile', 'profiles', 'help', 'about', 'terms', 'privacy',
+  'static', 'assets', 'public', 'src', 'app', 'lib', 'components', 'health'
+]
 
 export function validateSlug(slug: string): { valid: boolean; error?: string } {
   if (!slug) {
@@ -30,16 +34,26 @@ export function validateSlug(slug: string): { valid: boolean; error?: string } {
   if (slug.startsWith('-') || slug.endsWith('-')) {
     return { valid: false, error: 'Slug cannot start or end with a hyphen' }
   }
+  if (RESERVED_SLUGS.includes(slug)) {
+    return { valid: false, error: 'This username is reserved' }
+  }
   return { valid: true }
 }
 
 export function sanitizeContent(content: string): string {
+  // Remove control characters and null bytes, but don't HTML-escape
+  // React handles XSS protection automatically when rendering
   return content
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .slice(0, 500) // Max 500 chars
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .trim()
+    .slice(0, 500)
+}
+
+export function sanitizeProjectName(name: string): string {
+  return name
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .trim()
+    .slice(0, 100)
 }
 
 export function generateSuggestions(slug: string): string[] {
@@ -48,14 +62,4 @@ export function generateSuggestions(slug: string): string[] {
     .map(suffix => `${slug}${suffix}`)
     .filter(s => s.length <= 20)
     .slice(0, 3)
-}
-
-export function timeAgo(date: Date): string {
-  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000)
-
-  if (seconds < 60) return 'just now'
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
-  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`
-  return date.toLocaleDateString()
 }

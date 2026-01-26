@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { errorResponse, ApiError } from '@/lib/api-utils'
 
 export async function GET(
   request: NextRequest,
@@ -16,26 +17,32 @@ export async function GET(
       .single()
 
     if (!feed) {
-      return NextResponse.json({ error: 'not_found' }, { status: 404 })
+      throw new ApiError('Feed not found', 404, 'not_found')
     }
 
     // Get updates
-    const { data: updates } = await supabase
+    const { data: updates, error } = await supabase
       .from('updates')
-      .select('project_name, content, created_at')
+      .select('id, project_name, content, created_at')
       .eq('feed_id', feed.id)
       .order('created_at', { ascending: false })
       .limit(100)
 
+    if (error) {
+      console.error('Error fetching feed:', error)
+      throw error
+    }
+
     return NextResponse.json({
       slug,
       updates: updates?.map(u => ({
+        id: u.id,
         project: u.project_name,
         content: u.content,
         created_at: u.created_at
       })) || []
     })
-  } catch {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  } catch (error) {
+    return errorResponse(error)
   }
 }

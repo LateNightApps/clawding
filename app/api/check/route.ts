@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { validateSlug, generateSuggestions } from '@/lib/utils'
+import { parseJsonBody, errorResponse, rateLimit, getClientIp, ApiError } from '@/lib/api-utils'
 
 export async function POST(request: NextRequest) {
   try {
-    const { slug } = await request.json()
+    // Rate limit: 30 checks per minute per IP
+    const ip = getClientIp(request)
+    const { allowed } = rateLimit(`check:${ip}`, 30, 60000)
+    if (!allowed) {
+      throw new ApiError('Too many requests', 429, 'rate_limited')
+    }
+
+    const { slug } = await parseJsonBody<{ slug: string }>(request)
 
     const validation = validateSlug(slug)
     if (!validation.valid) {
@@ -26,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ available: true, slug })
-  } catch {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  } catch (error) {
+    return errorResponse(error)
   }
 }

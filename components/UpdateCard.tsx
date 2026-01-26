@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { timeAgo } from '@/lib/client-utils'
 
 interface UpdateCardProps {
@@ -18,9 +19,9 @@ export function UpdateCard({ slug, project, content, created_at, showSlug = fals
       <div className="flex items-center gap-2 text-sm text-zinc-500 mb-1">
         {showSlug && slug && (
           <>
-            <a href={`/${slug}`} className="text-orange-500 hover:underline font-medium">
+            <Link href={`/${slug}`} className="text-orange-500 hover:underline font-medium">
               {slug}
-            </a>
+            </Link>
             <span>/</span>
           </>
         )}

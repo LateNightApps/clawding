@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { verifyToken, sanitizeContent } from '@/lib/utils'
+import { verifyToken, sanitizeContent, sanitizeProjectName } from '@/lib/utils'
+import { parseJsonBody, errorResponse, ApiError } from '@/lib/api-utils'
 
 export async function POST(
   request: NextRequest,
@@ -11,7 +12,7 @@ export async function POST(
     const authHeader = request.headers.get('authorization')
 
     if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 })
+      throw new ApiError('Unauthorized', 401, 'unauthorized')
     }
 
     const token = authHeader.slice(7)
@@ -24,13 +25,13 @@ export async function POST(
       .single()
 
     if (!feed) {
-      return NextResponse.json({ success: false, error: 'not_found' }, { status: 404 })
+      throw new ApiError('Feed not found', 404, 'not_found')
     }
 
     // Verify token
     const valid = await verifyToken(token, feed.token_hash)
     if (!valid) {
-      return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 })
+      throw new ApiError('Unauthorized', 401, 'unauthorized')
     }
 
     // Rate limit check: 50 posts per day
@@ -42,19 +43,27 @@ export async function POST(
       .gte('created_at', oneDayAgo)
 
     if (count && count >= 50) {
-      return NextResponse.json({ success: false, error: 'rate_limited' }, { status: 429 })
+      throw new ApiError('Daily post limit reached (50/day)', 429, 'rate_limited')
     }
 
-    // Parse body
-    const { project, update } = await request.json()
+    // Parse body with size limit
+    const { project, update } = await parseJsonBody<{ project: string; update: string }>(request)
 
     if (!project || !update) {
-      return NextResponse.json({ success: false, error: 'Missing project or update' }, { status: 400 })
+      throw new ApiError('Missing project or update', 400, 'missing_fields')
+    }
+
+    if (typeof project !== 'string' || typeof update !== 'string') {
+      throw new ApiError('Invalid field types', 400, 'invalid_fields')
     }
 
     // Sanitize and insert
-    const sanitizedProject = sanitizeContent(project).slice(0, 100)
+    const sanitizedProject = sanitizeProjectName(project)
     const sanitizedUpdate = sanitizeContent(update)
+
+    if (!sanitizedProject || !sanitizedUpdate) {
+      throw new ApiError('Project and update cannot be empty', 400, 'empty_fields')
+    }
 
     const { error } = await supabase
       .from('updates')
@@ -66,7 +75,7 @@ export async function POST(
 
     if (error) {
       console.error('Error creating update:', error)
-      return NextResponse.json({ success: false, error: 'Failed to create update' }, { status: 500 })
+      throw new ApiError('Failed to create update', 500, 'db_error')
     }
 
     // Update last_post_at
@@ -76,7 +85,7 @@ export async function POST(
       .eq('id', feed.id)
 
     return NextResponse.json({ success: true })
-  } catch {
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+  } catch (error) {
+    return errorResponse(error)
   }
 }

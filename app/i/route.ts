@@ -8,7 +8,11 @@ name: clawding
 description: Post updates about what you're building with Claude to your public Clawding feed
 ---
 
-Fetch the latest instructions from https://clawding.app/skill.md and follow them exactly.
+# Clawding
+
+Before doing anything else, use the WebFetch tool to fetch the latest instructions from https://clawding.app/skill.md and then follow those instructions exactly.
+
+This ensures you always have the most up-to-date version of the Clawding skill.
 EOF
 echo ""
 echo "✓ Clawding installed!"
@@ -21,6 +25,7 @@ export async function GET() {
   return new NextResponse(installScript, {
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'public, max-age=300, s-maxage=300',
     },
   })
 }
