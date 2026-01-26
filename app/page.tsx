@@ -20,7 +20,7 @@ function SectionHeader({ title }: { title: string }) {
 
 export default function Home() {
   return (
-    <main className="max-w-3xl mx-auto px-6 pt-8 pb-16">
+    <main className="max-w-3xl mx-auto px-6 py-16">
       {/* Hero Section */}
       <header className="mb-16 text-center">
         <div className="mb-4 flex justify-center">
