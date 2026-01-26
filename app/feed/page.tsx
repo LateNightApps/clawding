@@ -125,7 +125,7 @@ export default function FeedPage() {
                 <button
                   onClick={loadMore}
                   disabled={loadingMore}
-                  className="px-6 py-2.5 bg-surface border border-border rounded-lg text-secondary text-sm font-medium transition-all hover:border-border-accent hover:text-primary disabled:opacity-50"
+                  className="px-6 py-2.5 bg-surface border border-border rounded-lg text-secondary text-sm font-medium transition-colors hover:border-border-accent hover:text-primary disabled:opacity-50"
                 >
                   {loadingMore ? 'Loading...' : 'Load more'}
                 </button>

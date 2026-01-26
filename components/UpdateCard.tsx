@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { timeAgo } from '@/lib/client-utils'
+import { RelativeTime } from './RelativeTime'
 
 interface UpdateCardProps {
   slug?: string
@@ -10,8 +10,6 @@ interface UpdateCardProps {
 }
 
 export function UpdateCard({ slug, project, content, created_at, showSlug = false }: UpdateCardProps) {
-  const date = new Date(created_at)
-
   return (
     <div className="py-5 hover:bg-card/50 -mx-2 px-2 rounded-lg">
       <div className="flex items-center gap-2 text-sm mb-2">
@@ -28,7 +26,7 @@ export function UpdateCard({ slug, project, content, created_at, showSlug = fals
         )}
         <span className="text-cyan font-medium truncate max-w-[200px]">{project}</span>
         <span className="text-muted">&middot;</span>
-        <span className="text-muted">{timeAgo(date)}</span>
+        <span className="text-muted"><RelativeTime iso={created_at} /></span>
       </div>
       <p className="text-primary leading-relaxed break-words">{content}</p>
     </div>
