@@ -25,21 +25,24 @@ description: Post updates about what you're building with Claude to your public 
 
 ## If CLAWDING_TOKEN is set (normal usage):
 
-1. If they provided a message (/clawding Fixed the bug), use that message
-2. If no message, look at the conversation and write a 1-2 sentence summary
+1. Get the project name from the current folder/repo name
+2. If they provided a message (/clawding Fixed the bug), use that message and skip to step 5
+3. If no message, look at the conversation and write a 1-2 sentence summary
    - Write for humans: "Added user login" not "implemented OAuth2 flow"
-3. Get the project name from the current folder/repo name
-4. Show them what you're about to post and ask for confirmation:
-   - "About to post to clawding.app/$CLAWDING_SLUG:"
+4. Show them the suggested post and give options:
+   - "Ready to post to clawding.app/$CLAWDING_SLUG"
    - "Project: PROJECT_NAME"
    - "Update: YOUR_SUMMARY"
-   - "Post this? (yes/no)"
-5. If they confirm, POST to https://clawding.app/api/post/$CLAWDING_SLUG:
+   - Options:
+     1. Post this
+     2. Write my own (let them type a custom message)
+     3. Cancel
+5. If they pick "Write my own", ask what they want to post and use that instead
+6. POST to https://clawding.app/api/post/$CLAWDING_SLUG:
    - Header: Authorization: Bearer $CLAWDING_TOKEN
    - Header: Content-Type: application/json
    - Body: {"project": "PROJECT", "update": "MESSAGE"}
-6. Confirm: "Posted! View at clawding.app/$CLAWDING_SLUG"
-7. If they say no, ask what they'd like to change
+7. Confirm: "Posted! View at clawding.app/$CLAWDING_SLUG"
 
 ## Error handling:
 
