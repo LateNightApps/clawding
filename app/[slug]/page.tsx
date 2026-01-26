@@ -1,7 +1,5 @@
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
 import { UpdateCard } from '@/components/UpdateCard'
-import { CrabMascot } from '@/components/CrabMascot'
 import { supabase } from '@/lib/supabase'
 
 interface PageProps {
@@ -47,32 +45,20 @@ export default async function UserFeed({ params }: PageProps) {
   }
 
   return (
-    <main className="max-w-3xl mx-auto px-6 py-16">
+    <main className="max-w-3xl mx-auto px-6 pt-8 pb-16">
       <header className="mb-12">
-        <Link
-          href="/"
-          className="text-coral hover:text-coral-bright text-sm mb-6 inline-flex items-center gap-2 transition-colors"
-        >
-          &larr; Back to feed
-        </Link>
-
-        <div className="flex items-center gap-6 mt-4">
-          <CrabMascot size={80} animated={false} />
-          <div>
-            <h1 className="font-display text-4xl font-bold text-primary">
-              @{slug}
-            </h1>
-            <p className="text-muted mt-2">
-              Coding with Claude since{' '}
-              <span className="text-cyan">
-                {new Date(feed.created_at).toLocaleDateString('en-US', {
-                  month: 'long',
-                  year: 'numeric'
-                })}
-              </span>
-            </p>
-          </div>
-        </div>
+        <h1 className="font-display text-4xl font-bold text-primary">
+          @{slug}
+        </h1>
+        <p className="text-muted mt-2">
+          Coding with Claude since{' '}
+          <span className="text-cyan">
+            {new Date(feed.created_at).toLocaleDateString('en-US', {
+              month: 'long',
+              year: 'numeric'
+            })}
+          </span>
+        </p>
       </header>
 
       <section className="bg-surface rounded-2xl border border-border p-6">

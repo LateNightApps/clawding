@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import Link from 'next/link'
 import { UpdateCard } from '@/components/UpdateCard'
 
 interface Update {
@@ -69,16 +68,7 @@ export default function FeedPage() {
   }
 
   return (
-    <main className="max-w-3xl mx-auto px-6 py-16">
-      <div className="mb-10">
-        <Link
-          href="/"
-          className="text-muted hover:text-secondary transition-colors text-sm"
-        >
-          &larr; Back to home
-        </Link>
-      </div>
-
+    <main className="max-w-3xl mx-auto px-6 pt-8 pb-16">
       <div className="flex items-center gap-3 mb-8">
         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
         <h1 className="font-display text-lg font-semibold text-primary px-4">

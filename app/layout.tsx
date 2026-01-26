@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { CrabMascot } from "@/components/CrabMascot";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,6 +16,17 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="min-h-screen flex flex-col">
+        <nav className="max-w-3xl mx-auto w-full px-6 pt-6">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2.5 transition-opacity hover:opacity-80"
+          >
+            <CrabMascot size={32} animated={false} />
+            <span className="font-display text-lg font-bold text-gradient">
+              Clawding
+            </span>
+          </Link>
+        </nav>
         <div className="flex-1">
           {children}
         </div>
