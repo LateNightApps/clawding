@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { InstallCommand } from '@/components/InstallCommand'
 import { GlobalFeed } from '@/components/GlobalFeed'
+import { UpdateCard } from '@/components/UpdateCard'
 import { CrabMascot } from '@/components/CrabMascot'
 import { StatsBar } from '@/components/StatsBar'
 import { ActiveCoders } from '@/components/ActiveCoders'
@@ -191,11 +192,22 @@ export default async function Home() {
         <StatsBar initialStats={stats} />
       </section>
 
-      {/* Recent Updates */}
+      {/* Recent Updates — BINARY SEARCH: server-rendered, no client component */}
       <section className="mb-16">
         <SectionHeader title="Recent Updates" />
         <div className="bg-surface rounded-2xl border border-border p-6">
-          <GlobalFeed initialUpdates={updates} />
+          <div className="divide-y divide-border">
+            {updates.map((update) => (
+              <UpdateCard
+                key={update.id}
+                slug={update.slug}
+                project={update.project}
+                content={update.content}
+                created_at={update.created_at}
+                showSlug
+              />
+            ))}
+          </div>
           <div className="text-center pt-4 border-t border-border mt-2">
             <Link
               href="/feed"
