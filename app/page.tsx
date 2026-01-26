@@ -6,7 +6,7 @@ import { StatsBar } from '@/components/StatsBar'
 import { ActiveCoders } from '@/components/ActiveCoders'
 import { DiscoverProfiles } from '@/components/DiscoverProfiles'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 function SectionHeader({ title }: { title: string }) {
   return (
