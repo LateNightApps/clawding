@@ -200,11 +200,9 @@ export default async function Home() {
             {updates.map((update) => (
               <UpdateCard
                 key={update.id}
-                slug={update.slug}
                 project={update.project}
                 content={update.content}
                 created_at={update.created_at}
-                showSlug
               />
             ))}
           </div>
