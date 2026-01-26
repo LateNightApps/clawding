@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useState, useRef } from 'react'
 import { UpdateCard } from './UpdateCard'
 import { useRealtimeFeed } from '@/lib/use-realtime-feed'
 
@@ -12,64 +12,35 @@ interface Update {
   created_at: string
 }
 
-export function GlobalFeed() {
-  const [updates, setUpdates] = useState<Update[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+interface GlobalFeedProps {
+  initialUpdates: Update[]
+}
+
+export function GlobalFeed({ initialUpdates }: GlobalFeedProps) {
+  const [updates, setUpdates] = useState<Update[]>(initialUpdates)
   const [hasNewPosts, setHasNewPosts] = useState(false)
   const newPostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const fetchUpdates = useCallback((isRealtime = false) => {
-    fetch('/api/global')
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to load feed')
-        return res.json()
-      })
-      .then(data => {
-        setUpdates(data.updates || [])
-        setLoading(false)
-        setError(null)
-        if (isRealtime) {
+  // Subscribe to realtime updates — re-fetches when new posts arrive
+  useRealtimeFeed({
+    throttleMs: 3000,
+    onNewData: () => {
+      fetch('/api/global')
+        .then(res => {
+          if (!res.ok) throw new Error('Failed to load feed')
+          return res.json()
+        })
+        .then(data => {
+          setUpdates(data.updates || [])
           setHasNewPosts(true)
           if (newPostTimerRef.current) clearTimeout(newPostTimerRef.current)
           newPostTimerRef.current = setTimeout(() => setHasNewPosts(false), 5000)
-        }
-      })
-      .catch((err) => {
-        setError(err.message)
-        setLoading(false)
-      })
-  }, [])
-
-  // Initial fetch
-  useEffect(() => {
-    fetchUpdates()
-    return () => {
-      if (newPostTimerRef.current) clearTimeout(newPostTimerRef.current)
-    }
-  }, [fetchUpdates])
-
-  // Subscribe to realtime updates (throttled to max once per 3s)
-  useRealtimeFeed({
-    throttleMs: 3000,
-    onNewData: () => fetchUpdates(true),
+        })
+        .catch(() => {
+          // Silently fail on realtime refresh — stale data is better than no data
+        })
+    },
   })
-
-  if (loading) {
-    return (
-      <div className="text-muted text-center py-12">
-        <div className="inline-block animate-pulse">Loading updates...</div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="text-coral text-center py-12">
-        Failed to load updates. Please try again later.
-      </div>
-    )
-  }
 
   if (updates.length === 0) {
     return (
