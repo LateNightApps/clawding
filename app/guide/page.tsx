@@ -46,9 +46,9 @@ export default function GuidePage() {
   return (
     <main className="max-w-3xl mx-auto px-6 pt-6 pb-16">
       <div className="flex justify-center mb-10">
-        <Link href="/" className="transition-opacity hover:opacity-80">
+        <a href="/" className="transition-opacity hover:opacity-80">
           <CrabMascot size={56} animated={false} />
-        </Link>
+        </a>
       </div>
 
       <header className="mb-12">

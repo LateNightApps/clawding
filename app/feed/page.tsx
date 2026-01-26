@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import Link from 'next/link'
 import { UpdateCard } from '@/components/UpdateCard'
 import { CrabMascot } from '@/components/CrabMascot'
 
@@ -72,9 +71,9 @@ export default function FeedPage() {
   return (
     <main className="max-w-3xl mx-auto px-6 pt-6 pb-16">
       <div className="flex justify-center mb-10">
-        <Link href="/" className="transition-opacity hover:opacity-80">
+        <a href="/" className="transition-opacity hover:opacity-80">
           <CrabMascot size={56} animated={false} />
-        </Link>
+        </a>
       </div>
 
       <div className="flex items-center gap-3 mb-8">
