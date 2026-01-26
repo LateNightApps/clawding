@@ -21,26 +21,25 @@ export function GlobalFeed({ initialUpdates }: GlobalFeedProps) {
   const [hasNewPosts, setHasNewPosts] = useState(false)
   const newPostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // BINARY SEARCH: realtime subscription disabled for testing
-  // useRealtimeFeed({
-  //   throttleMs: 3000,
-  //   onNewData: () => {
-  //     fetch('/api/global')
-  //       .then(res => {
-  //         if (!res.ok) throw new Error('Failed to load feed')
-  //         return res.json()
-  //       })
-  //       .then(data => {
-  //         setUpdates(data.updates || [])
-  //         setHasNewPosts(true)
-  //         if (newPostTimerRef.current) clearTimeout(newPostTimerRef.current)
-  //         newPostTimerRef.current = setTimeout(() => setHasNewPosts(false), 5000)
-  //       })
-  //       .catch(() => {
-  //         // Silently fail on realtime refresh — stale data is better than no data
-  //       })
-  //   },
-  // })
+  useRealtimeFeed({
+    throttleMs: 3000,
+    onNewData: () => {
+      fetch('/api/global')
+        .then(res => {
+          if (!res.ok) throw new Error('Failed to load feed')
+          return res.json()
+        })
+        .then(data => {
+          setUpdates(data.updates || [])
+          setHasNewPosts(true)
+          if (newPostTimerRef.current) clearTimeout(newPostTimerRef.current)
+          newPostTimerRef.current = setTimeout(() => setHasNewPosts(false), 5000)
+        })
+        .catch(() => {
+          // Silently fail on realtime refresh — stale data is better than no data
+        })
+    },
+  })
 
   if (updates.length === 0) {
     return (

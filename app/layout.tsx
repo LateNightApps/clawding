@@ -48,8 +48,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`dark ${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="min-h-screen flex flex-col">
-        <div className="flex-1">
+      <body className="min-h-screen flex flex-col" style={{ background: '#050810' }}>
+        <div className="flex-1" style={{ background: '#050810' }}>
           {children}
         </div>
         <footer className="py-8 text-center text-muted text-sm">

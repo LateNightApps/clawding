@@ -1,5 +1,3 @@
-import Link from 'next/link'
-
 interface ActiveCoder {
   slug: string
   postCount: number
@@ -21,7 +19,7 @@ export function ActiveCoders({ initialCoders }: ActiveCodersProps) {
   return (
     <div className="space-y-2">
       {initialCoders.map((coder, index) => (
-        <Link
+        <a
           key={coder.slug}
           href={`/${coder.slug}`}
           className="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-card/50"
@@ -35,7 +33,7 @@ export function ActiveCoders({ initialCoders }: ActiveCodersProps) {
           <span className="text-muted text-sm">
             {coder.postCount} {coder.postCount === 1 ? 'post' : 'posts'}
           </span>
-        </Link>
+        </a>
       ))}
     </div>
   )

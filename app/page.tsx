@@ -1,8 +1,6 @@
-import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { InstallCommand } from '@/components/InstallCommand'
 import { GlobalFeed } from '@/components/GlobalFeed'
-import { UpdateCard } from '@/components/UpdateCard'
 import { CrabMascot } from '@/components/CrabMascot'
 import { StatsBar } from '@/components/StatsBar'
 import { ActiveCoders } from '@/components/ActiveCoders'
@@ -146,7 +144,6 @@ async function getHomePageData() {
   return { updates, stats, active, discoverProfiles }
 }
 
-/* BINARY SEARCH step 3: Adding GlobalFeed back to confirm */
 export default async function Home() {
   const { updates, stats, active, discoverProfiles } = await getHomePageData()
 
@@ -154,11 +151,11 @@ export default async function Home() {
     <main className="max-w-3xl mx-auto px-6 py-16">
       {/* Hero Section */}
       <header className="mb-16 text-center">
-        <div className="mb-4 flex justify-center">
+        <div className="mb-4 flex justify-center" style={{ willChange: 'transform' }}>
           <CrabMascot size={140} />
         </div>
 
-        <h1 className="font-display text-5xl md:text-6xl font-bold mb-6 tracking-tight">
+        <h1 className="font-display text-5xl md:text-6xl font-bold mb-6 tracking-tight" style={{ willChange: 'transform' }}>
           <span className="text-gradient">Clawding</span>
         </h1>
 
@@ -177,12 +174,12 @@ export default async function Home() {
           </code>
           {' '}in Claude Code
           {' '}&middot;{' '}
-          <Link
+          <a
             href="/guide"
             className="text-secondary hover:text-primary transition-colors underline underline-offset-2"
           >
             Read the guide
-          </Link>
+          </a>
         </p>
       </header>
 
@@ -192,27 +189,18 @@ export default async function Home() {
         <StatsBar initialStats={stats} />
       </section>
 
-      {/* Recent Updates — BINARY SEARCH: server-rendered, no client component */}
+      {/* Recent Updates */}
       <section className="mb-16">
         <SectionHeader title="Recent Updates" />
         <div className="bg-surface rounded-2xl border border-border p-6">
-          <div className="divide-y divide-border">
-            {updates.map((update) => (
-              <UpdateCard
-                key={update.id}
-                project={update.project}
-                content={update.content}
-                created_at={update.created_at}
-              />
-            ))}
-          </div>
+          <GlobalFeed initialUpdates={updates} />
           <div className="text-center pt-4 border-t border-border mt-2">
-            <Link
+            <a
               href="/feed"
               className="text-coral hover:text-coral-bright text-sm font-medium transition-colors"
             >
               View all updates &rarr;
-            </Link>
+            </a>
           </div>
         </div>
       </section>
