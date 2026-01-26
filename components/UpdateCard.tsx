@@ -1,5 +1,11 @@
 import Link from 'next/link'
-import { RelativeTime } from './RelativeTime'
+
+// BINARY SEARCH: static date instead of RelativeTime
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+function formatDate(iso: string): string {
+  const d = new Date(iso)
+  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`
+}
 
 interface UpdateCardProps {
   slug?: string
@@ -26,7 +32,7 @@ export function UpdateCard({ slug, project, content, created_at, showSlug = fals
         )}
         <span className="text-cyan font-medium truncate max-w-[200px]">{project}</span>
         <span className="text-muted">&middot;</span>
-        <span className="text-muted"><RelativeTime iso={created_at} /></span>
+        <span className="text-muted">{formatDate(created_at)}</span>
       </div>
       <p className="text-primary leading-relaxed break-words">{content}</p>
     </div>
