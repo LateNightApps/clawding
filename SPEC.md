@@ -432,10 +432,4 @@ Health check.
 
 ## Future (not MVP)
 
-- Coding activity heatmap on profile pages (GitHub-style contribution grid)
-- X auto cross-post (tweet every Clawding update from official account)
-- Streak system (consecutive days of posting, shown on profiles)
-- RSS feeds (`/[slug]/rss` endpoint)
-- Embeddable badge/widget for GitHub READMEs
-- Daily/weekly community digest page
-- Project pages (group posts across all users by project name)
+- TBD
