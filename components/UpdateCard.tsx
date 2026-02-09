@@ -16,27 +16,20 @@ export function UpdateCard({ slug, parentSlug, project, content, created_at, sho
       <div className="flex items-center gap-2 text-sm mb-2">
         {showSlug && slug && (
           <>
-            {parentSlug && parentSlug !== slug && (
-              <>
-                <Link
-                  href={`/${parentSlug}`}
-                  className="text-coral hover:text-coral-bright font-medium transition-colors"
-                >
-                  @{parentSlug}
-                </Link>
-                <span className="text-muted">/</span>
-              </>
-            )}
             <Link
               href={`/${slug}`}
               className="text-coral hover:text-coral-bright font-medium transition-colors"
             >
               @{slug}
             </Link>
-            <span className="text-muted">/</span>
           </>
         )}
-        <span className="text-cyan font-medium truncate max-w-[200px]">{project}</span>
+        {project.toLowerCase() !== slug?.toLowerCase() && (
+          <>
+            {showSlug && slug && <span className="text-muted">/</span>}
+            <span className="text-cyan font-medium truncate max-w-[200px]">{project}</span>
+          </>
+        )}
         <span className="text-muted">&middot;</span>
         <span className="text-muted"><RelativeTime iso={created_at} /></span>
       </div>
