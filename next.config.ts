@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https:",
               "font-src 'self' https://fonts.gstatic.com",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://www.googletagmanager.com",
+              "connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com",
               "frame-ancestors 'none'",
             ].join('; '),
           },

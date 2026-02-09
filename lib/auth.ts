@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { eq } from 'drizzle-orm'
+import { db } from '@/lib/db'
+import { feeds } from '@/lib/db/schema'
 import { verifyToken } from '@/lib/utils'
 import { ApiError } from '@/lib/api-utils'
 
@@ -23,17 +25,17 @@ export async function authenticateRequest(
 
   const token = authHeader.slice(7)
 
-  const { data: feed } = await supabase
-    .from('feeds')
-    .select('id, token_hash')
-    .eq('slug', slug)
-    .single()
+  const [feed] = await db
+    .select({ id: feeds.id, tokenHash: feeds.tokenHash })
+    .from(feeds)
+    .where(eq(feeds.slug, slug))
+    .limit(1)
 
   if (!feed) {
     throw new ApiError('Feed not found', 404, 'not_found')
   }
 
-  const valid = await verifyToken(token, feed.token_hash)
+  const valid = await verifyToken(token, feed.tokenHash)
   if (!valid) {
     throw new ApiError('Unauthorized', 401, 'unauthorized')
   }

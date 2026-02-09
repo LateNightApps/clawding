@@ -49,7 +49,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`dark ${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="min-h-screen flex flex-col" style={{ background: '#050810' }}>
+      <body className="min-h-screen flex flex-col bg-background">
         {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
           <>
             <Script
@@ -66,7 +66,7 @@ export default function RootLayout({
             </Script>
           </>
         )}
-        <div className="flex-1" style={{ background: '#050810' }}>
+        <div className="flex-1">
           {children}
         </div>
         <footer className="py-8 text-center text-muted text-sm">

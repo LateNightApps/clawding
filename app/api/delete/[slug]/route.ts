@@ -1,7 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { revalidatePath } from 'next/cache'
+import { db } from '@/lib/db'
+import { updates } from '@/lib/db/schema'
+import { eq, desc } from 'drizzle-orm'
 import { errorResponse, ApiError } from '@/lib/api-utils'
 import { authenticateRequest } from '@/lib/auth'
+
+async function getLatestPost(feedId: string) {
+  const [post] = await db
+    .select({
+      id: updates.id,
+      projectName: updates.projectName,
+      content: updates.content,
+      createdAt: updates.createdAt
+    })
+    .from(updates)
+    .where(eq(updates.feedId, feedId))
+    .orderBy(desc(updates.createdAt))
+    .limit(1)
+
+  return post ?? null
+}
 
 export async function DELETE(
   request: NextRequest,
@@ -11,36 +30,23 @@ export async function DELETE(
     const { slug } = await params
     const { feedId } = await authenticateRequest(request, slug)
 
-    // Get most recent post
-    const { data: lastPost } = await supabase
-      .from('updates')
-      .select('id, project_name, content, created_at')
-      .eq('feed_id', feedId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
+    const lastPost = await getLatestPost(feedId)
     if (!lastPost) {
       throw new ApiError('No posts to delete', 404, 'no_posts')
     }
 
-    // Delete it
-    const { error } = await supabase
-      .from('updates')
-      .delete()
-      .eq('id', lastPost.id)
+    await db
+      .delete(updates)
+      .where(eq(updates.id, lastPost.id))
 
-    if (error) {
-      console.error('Error deleting post:', error)
-      throw new ApiError('Failed to delete', 500, 'db_error')
-    }
+    revalidatePath('/')
 
     return NextResponse.json({
       success: true,
       deleted: {
-        project: lastPost.project_name,
+        project: lastPost.projectName,
         content: lastPost.content,
-        created_at: lastPost.created_at
+        created_at: lastPost.createdAt
       }
     })
   } catch (error) {
@@ -48,7 +54,6 @@ export async function DELETE(
   }
 }
 
-// GET to fetch most recent post (for preview before delete)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -57,15 +62,7 @@ export async function GET(
     const { slug } = await params
     const { feedId } = await authenticateRequest(request, slug)
 
-    // Get most recent post
-    const { data: lastPost } = await supabase
-      .from('updates')
-      .select('id, project_name, content, created_at')
-      .eq('feed_id', feedId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
+    const lastPost = await getLatestPost(feedId)
     if (!lastPost) {
       throw new ApiError('No posts found', 404, 'no_posts')
     }
@@ -73,9 +70,9 @@ export async function GET(
     return NextResponse.json({
       success: true,
       post: {
-        project: lastPost.project_name,
+        project: lastPost.projectName,
         content: lastPost.content,
-        created_at: lastPost.created_at
+        created_at: lastPost.createdAt
       }
     })
   } catch (error) {

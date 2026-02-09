@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { db } from '@/lib/db'
+import { feeds, updates } from '@/lib/db/schema'
+import { eq, desc, inArray, sql } from 'drizzle-orm'
 import { errorResponse, ApiError } from '@/lib/api-utils'
 
 export async function GET(
@@ -10,39 +12,114 @@ export async function GET(
     const { slug } = await params
 
     // Find feed
-    const { data: feed } = await supabase
-      .from('feeds')
-      .select('id, x_handle, website_url')
-      .eq('slug', slug)
-      .single()
+    const [feed] = await db
+      .select({
+        id: feeds.id,
+        xHandle: feeds.xHandle,
+        websiteUrl: feeds.websiteUrl,
+        description: feeds.description,
+        parentId: feeds.parentId
+      })
+      .from(feeds)
+      .where(eq(feeds.slug, slug))
+      .limit(1)
 
     if (!feed) {
       throw new ApiError('Feed not found', 404, 'not_found')
     }
 
-    // Get updates
-    const { data: updates, error } = await supabase
-      .from('updates')
-      .select('id, project_name, content, created_at')
-      .eq('feed_id', feed.id)
-      .order('created_at', { ascending: false })
+    // Get updates for this feed
+    const feedUpdates = await db
+      .select({
+        id: updates.id,
+        projectName: updates.projectName,
+        content: updates.content,
+        createdAt: updates.createdAt
+      })
+      .from(updates)
+      .where(eq(updates.feedId, feed.id))
+      .orderBy(desc(updates.createdAt))
       .limit(100)
 
-    if (error) {
-      console.error('Error fetching feed:', error)
-      throw new ApiError('Failed to fetch feed', 500, 'db_error')
+    // Get parent info if exists
+    let parent = null
+    if (feed.parentId) {
+      const [parentFeed] = await db
+        .select({
+          slug: feeds.slug,
+          description: feeds.description
+        })
+        .from(feeds)
+        .where(eq(feeds.id, feed.parentId))
+        .limit(1)
+
+      if (parentFeed) {
+        parent = {
+          slug: parentFeed.slug,
+          description: parentFeed.description ?? null
+        }
+      }
+    }
+
+    // Get children with post counts in a single query using subqueries
+    const childrenFeeds = await db
+      .select({
+        id: feeds.id,
+        slug: feeds.slug,
+        description: feeds.description,
+        lastPostAt: feeds.lastPostAt,
+        postCount: sql<number>`(SELECT COUNT(*)::int FROM ${updates} WHERE ${updates.feedId} = ${feeds.id})`,
+      })
+      .from(feeds)
+      .where(eq(feeds.parentId, feed.id))
+
+    const children = childrenFeeds.map(child => ({
+      slug: child.slug,
+      description: child.description ?? null,
+      lastPostAt: child.lastPostAt ?? null,
+      postCount: child.postCount,
+    }))
+
+    // Get aggregated child updates if has children — single query with join
+    let childUpdates = null
+    if (childrenFeeds.length > 0) {
+      const childIds = childrenFeeds.map(c => c.id)
+      const allChildUpdates = await db
+        .select({
+          id: updates.id,
+          projectName: updates.projectName,
+          content: updates.content,
+          createdAt: updates.createdAt,
+          slug: feeds.slug,
+        })
+        .from(updates)
+        .innerJoin(feeds, eq(updates.feedId, feeds.id))
+        .where(inArray(updates.feedId, childIds))
+        .orderBy(desc(updates.createdAt))
+        .limit(50)
+
+      childUpdates = allChildUpdates.map(u => ({
+        id: u.id,
+        slug: u.slug,
+        project: u.projectName,
+        content: u.content,
+        created_at: u.createdAt,
+      }))
     }
 
     return NextResponse.json({
       slug,
-      x_handle: feed.x_handle ?? null,
-      website_url: feed.website_url ?? null,
-      updates: updates?.map(u => ({
+      x_handle: feed.xHandle ?? null,
+      website_url: feed.websiteUrl ?? null,
+      description: feed.description ?? null,
+      updates: feedUpdates.map(u => ({
         id: u.id,
-        project: u.project_name,
+        project: u.projectName,
         content: u.content,
-        created_at: u.created_at
-      })) || []
+        created_at: u.createdAt
+      })),
+      ...(parent ? { parent } : {}),
+      ...(children.length > 0 ? { children, childUpdates } : {}),
     })
   } catch (error) {
     return errorResponse(error)

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { revalidatePath } from 'next/cache'
+import { db } from '@/lib/db'
+import { feeds, updates } from '@/lib/db/schema'
+import { eq, gte, count, and } from 'drizzle-orm'
 import { sanitizeContent, sanitizeProjectName } from '@/lib/utils'
 import { parseJsonBody, errorResponse, ApiError } from '@/lib/api-utils'
 import { authenticateRequest } from '@/lib/auth'
@@ -13,14 +16,16 @@ export async function POST(
     const { feedId } = await authenticateRequest(request, slug)
 
     // Rate limit check: 50 posts per day
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    const { count } = await supabase
-      .from('updates')
-      .select('*', { count: 'exact', head: true })
-      .eq('feed_id', feedId)
-      .gte('created_at', oneDayAgo)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const [{ value: postCount }] = await db
+      .select({ value: count() })
+      .from(updates)
+      .where(and(
+        eq(updates.feedId, feedId),
+        gte(updates.createdAt, oneDayAgo)
+      ))
 
-    if (count && count >= 50) {
+    if (postCount >= 50) {
       throw new ApiError('Daily post limit reached (50/day)', 429, 'rate_limited')
     }
 
@@ -43,24 +48,20 @@ export async function POST(
       throw new ApiError('Project and update cannot be empty', 400, 'empty_fields')
     }
 
-    const { error } = await supabase
-      .from('updates')
-      .insert({
-        feed_id: feedId,
-        project_name: sanitizedProject,
-        content: sanitizedUpdate
-      })
-
-    if (error) {
-      console.error('Error creating update:', error)
-      throw new ApiError('Failed to create update', 500, 'db_error')
-    }
+    await db.insert(updates).values({
+      feedId,
+      projectName: sanitizedProject,
+      content: sanitizedUpdate
+    })
 
     // Update last_post_at
-    await supabase
-      .from('feeds')
-      .update({ last_post_at: new Date().toISOString() })
-      .eq('id', feedId)
+    await db
+      .update(feeds)
+      .set({ lastPostAt: new Date() })
+      .where(eq(feeds.id, feedId))
+
+    // Regenerate static homepage with new post
+    revalidatePath('/')
 
     return NextResponse.json({ success: true })
   } catch (error) {

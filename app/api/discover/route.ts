@@ -1,65 +1,58 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
-import { errorResponse, ApiError } from '@/lib/api-utils'
-
-interface DiscoverProfile {
-  slug: string
-  latestProject: string
-  latestContent: string
-  postCount: number
-}
+import { db } from '@/lib/db'
+import { feeds, updates } from '@/lib/db/schema'
+import { eq, desc, count, inArray, sql } from 'drizzle-orm'
+import { errorResponse } from '@/lib/api-utils'
 
 export async function GET() {
   try {
-    // Step 1: Get all feeds (bounded — one row per user)
-    const { data: feeds, error: feedsError } = await supabase
-      .from('feeds')
-      .select('id, slug')
+    // Get all feeds with post counts in a single query
+    const allFeeds = await db
+      .select({
+        id: feeds.id,
+        slug: feeds.slug,
+        postCount: sql<number>`(SELECT COUNT(*)::int FROM ${updates} WHERE ${updates.feedId} = ${feeds.id})`,
+      })
+      .from(feeds)
 
-    if (feedsError) {
-      console.error('Error fetching feeds for discover:', feedsError)
-      throw new ApiError('Failed to load profiles', 500, 'db_error')
-    }
-    if (!feeds || feeds.length === 0) {
+    // Filter feeds with posts, shuffle, pick 3
+    const candidates = allFeeds
+      .filter(f => f.postCount > 0)
+      .map(f => ({ ...f, sort: Math.random() }))
+      .sort((a, b) => a.sort - b.sort)
+      .slice(0, 3)
+
+    if (candidates.length === 0) {
       return NextResponse.json({ profiles: [] })
     }
 
-    // Step 2: Shuffle and pick candidates (pick more than 3 in case some have 0 posts)
-    const candidates = feeds
-      .map(f => ({ ...f, sort: Math.random() }))
-      .sort((a, b) => a.sort - b.sort)
-      .slice(0, 10)
-
-    // Step 3: For each candidate, get post count and latest post
-    const profiles: DiscoverProfile[] = []
-
-    for (const candidate of candidates) {
-      if (profiles.length >= 3) break
-
-      const [countResult, latestResult] = await Promise.all([
-        supabase
-          .from('updates')
-          .select('*', { count: 'exact', head: true })
-          .eq('feed_id', candidate.id),
-        supabase
-          .from('updates')
-          .select('project_name, content')
-          .eq('feed_id', candidate.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single(),
-      ])
-
-      const postCount = countResult.count ?? 0
-      if (postCount === 0 || !latestResult.data) continue
-
-      profiles.push({
-        slug: candidate.slug,
-        latestProject: latestResult.data.project_name,
-        latestContent: latestResult.data.content,
-        postCount,
+    // Get latest update for each candidate in a single query
+    const candidateIds = candidates.map(c => c.id)
+    const latestUpdates = await db
+      .select({
+        feedId: updates.feedId,
+        projectName: updates.projectName,
+        content: updates.content,
+        createdAt: updates.createdAt,
       })
-    }
+      .from(updates)
+      .where(inArray(updates.feedId, candidateIds))
+      .orderBy(desc(updates.createdAt))
+
+    // Group by feedId and take first (latest) per feed
+    const latestByFeed = new Map<string, { projectName: string; content: string }>()
+    latestUpdates.forEach(u => {
+      if (!latestByFeed.has(u.feedId)) {
+        latestByFeed.set(u.feedId, { projectName: u.projectName, content: u.content })
+      }
+    })
+
+    const profiles = candidates.map(c => ({
+      slug: c.slug,
+      latestProject: latestByFeed.get(c.id)?.projectName ?? '',
+      latestContent: latestByFeed.get(c.id)?.content ?? '',
+      postCount: c.postCount,
+    }))
 
     return NextResponse.json({ profiles }, {
       headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' },

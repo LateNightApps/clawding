@@ -1,25 +1,38 @@
+import Link from 'next/link'
 import { RelativeTime } from './RelativeTime'
 
 interface UpdateCardProps {
   slug?: string
+  parentSlug?: string
   project: string
   content: string
   created_at: string
   showSlug?: boolean
 }
 
-export function UpdateCard({ slug, project, content, created_at, showSlug = false }: UpdateCardProps) {
+export function UpdateCard({ slug, parentSlug, project, content, created_at, showSlug = false }: UpdateCardProps) {
   return (
     <div className="py-5 hover:bg-card/50 -mx-2 px-2 rounded-lg">
       <div className="flex items-center gap-2 text-sm mb-2">
         {showSlug && slug && (
           <>
-            <a
+            {parentSlug && (
+              <>
+                <Link
+                  href={`/${parentSlug}`}
+                  className="text-coral hover:text-coral-bright font-medium transition-colors"
+                >
+                  @{parentSlug}
+                </Link>
+                <span className="text-muted">/</span>
+              </>
+            )}
+            <Link
               href={`/${slug}`}
               className="text-coral hover:text-coral-bright font-medium transition-colors"
             >
               @{slug}
-            </a>
+            </Link>
             <span className="text-muted">/</span>
           </>
         )}

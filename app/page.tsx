@@ -1,12 +1,12 @@
-import { supabase } from '@/lib/supabase'
+import Link from 'next/link'
+import { db } from '@/lib/db'
+import { feeds, updates } from '@/lib/db/schema'
+import { eq, desc, gte, count, sql, inArray } from 'drizzle-orm'
 import { InstallCommand } from '@/components/InstallCommand'
 import { UpdateCard } from '@/components/UpdateCard'
 import { CrabMascot } from '@/components/CrabMascot'
-import { StatsBar } from '@/components/StatsBar'
 import { ActiveCoders } from '@/components/ActiveCoders'
 import { DiscoverProfiles } from '@/components/DiscoverProfiles'
-
-export const dynamic = 'force-dynamic'
 
 function SectionHeader({ title }: { title: string }) {
   return (
@@ -20,14 +20,6 @@ function SectionHeader({ title }: { title: string }) {
   )
 }
 
-interface UpdateRow {
-  id: string
-  project_name: string
-  content: string
-  created_at: string
-  feeds: { slug: string } | { slug: string }[]
-}
-
 async function getHomePageData() {
   const todayStart = new Date()
   todayStart.setUTCHours(0, 0, 0, 0)
@@ -35,113 +27,146 @@ async function getHomePageData() {
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-  const [
-    globalFeedResult,
-    codersCountResult,
-    postsCountResult,
-    postsTodayResult,
-    activeResult,
-    feedsResult,
-  ] = await Promise.all([
-    // Global feed (latest 10)
-    supabase
-      .from('updates')
-      .select('id, project_name, content, created_at, feeds!inner(slug)')
-      .order('created_at', { ascending: false })
-      .range(0, 9),
+  // Global feed (latest 10) with feed slug + parentId
+  const globalFeedResult = await db
+    .select({
+      id: updates.id,
+      projectName: updates.projectName,
+      content: updates.content,
+      createdAt: updates.createdAt,
+      slug: feeds.slug,
+      feedId: feeds.id,
+      parentId: feeds.parentId,
+    })
+    .from(updates)
+    .innerJoin(feeds, eq(updates.feedId, feeds.id))
+    .orderBy(desc(updates.createdAt))
+    .limit(10)
 
-    // Stats: total coders
-    supabase.from('feeds').select('*', { count: 'exact', head: true }),
+  // Batch resolve parent slugs
+  const parentIds = [...new Set(globalFeedResult.filter(u => u.parentId).map(u => u.parentId!))]
+  const parentSlugMap = new Map<string, string>()
+  if (parentIds.length > 0) {
+    const parentFeedsResult = await db
+      .select({ id: feeds.id, slug: feeds.slug })
+      .from(feeds)
+      .where(inArray(feeds.id, parentIds))
 
-    // Stats: total posts
-    supabase.from('updates').select('*', { count: 'exact', head: true }),
-
-    // Stats: posts today
-    supabase
-      .from('updates')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', todayStart.toISOString()),
-
-    // Active coders (last 7 days)
-    supabase
-      .from('updates')
-      .select('feed_id, feeds!inner(slug)')
-      .gte('created_at', sevenDaysAgo.toISOString())
-      .order('created_at', { ascending: false })
-      .limit(5000),
-
-    // Discover: all feeds for random selection
-    supabase.from('feeds').select('id, slug'),
-  ])
-
-  // Map global feed
-  const updates = (globalFeedResult.data as UpdateRow[] | null)?.map(u => {
-    const feed = Array.isArray(u.feeds) ? u.feeds[0] : u.feeds
-    return {
-      id: u.id,
-      slug: feed.slug,
-      project: u.project_name,
-      content: u.content,
-      created_at: u.created_at,
-    }
-  }) ?? []
-
-  // Map stats
-  const stats = {
-    totalCoders: codersCountResult.count ?? 0,
-    totalPosts: postsCountResult.count ?? 0,
-    postsToday: postsTodayResult.count ?? 0,
+    parentFeedsResult.forEach(p => parentSlugMap.set(p.id, p.slug))
   }
 
-  // Map active coders
+  const updatesList = globalFeedResult.map(u => ({
+    id: u.id,
+    slug: u.slug,
+    parentSlug: u.parentId ? parentSlugMap.get(u.parentId) ?? null : null,
+    project: u.projectName,
+    content: u.content,
+    created_at: u.createdAt.toISOString(),
+  }))
+
+  // Stats: total coders
+  const [{ value: totalCoders }] = await db
+    .select({ value: count() })
+    .from(feeds)
+
+  // Stats: total posts
+  const [{ value: totalPosts }] = await db
+    .select({ value: count() })
+    .from(updates)
+
+  // Stats: posts today
+  const [{ value: postsToday }] = await db
+    .select({ value: count() })
+    .from(updates)
+    .where(gte(updates.createdAt, todayStart))
+
+  // Stats: posts this week
+  const [{ value: postsWeek }] = await db
+    .select({ value: count() })
+    .from(updates)
+    .where(gte(updates.createdAt, sevenDaysAgo))
+
+  // Active coders (last 7 days) — single join query
+  const activeResult = await db
+    .select({
+      slug: feeds.slug,
+    })
+    .from(updates)
+    .innerJoin(feeds, eq(updates.feedId, feeds.id))
+    .where(gte(updates.createdAt, sevenDaysAgo))
+    .orderBy(desc(updates.createdAt))
+    .limit(5000)
+
   const activeCounts = new Map<string, number>()
-  for (const row of activeResult.data ?? []) {
-    const feed = Array.isArray(row.feeds) ? row.feeds[0] : row.feeds
-    const slug = (feed as { slug: string }).slug
-    activeCounts.set(slug, (activeCounts.get(slug) ?? 0) + 1)
+  for (const row of activeResult) {
+    activeCounts.set(row.slug, (activeCounts.get(row.slug) ?? 0) + 1)
   }
   const active = Array.from(activeCounts.entries())
     .map(([slug, postCount]) => ({ slug, postCount }))
     .sort((a, b) => b.postCount - a.postCount)
     .slice(0, 5)
 
-  // Discover profiles: pick 3 random feeds with posts
-  const allFeeds = feedsResult.data ?? []
-  const shuffled = allFeeds
-    .map(f => ({ ...f, sort: Math.random() }))
-    .sort((a, b) => a.sort - b.sort)
-    .slice(0, 10)
+  // New coders this week
+  const [{ value: newCoders }] = await db
+    .select({ value: count() })
+    .from(feeds)
+    .where(gte(feeds.createdAt, sevenDaysAgo))
 
-  const discoverProfiles = []
-  for (const candidate of shuffled) {
-    if (discoverProfiles.length >= 3) break
-
-    const [countResult, latestResult] = await Promise.all([
-      supabase
-        .from('updates')
-        .select('*', { count: 'exact', head: true })
-        .eq('feed_id', candidate.id),
-      supabase
-        .from('updates')
-        .select('project_name, content')
-        .eq('feed_id', candidate.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single(),
-    ])
-
-    const postCount = countResult.count ?? 0
-    if (postCount === 0 || !latestResult.data) continue
-
-    discoverProfiles.push({
-      slug: candidate.slug,
-      latestProject: latestResult.data.project_name,
-      latestContent: latestResult.data.content,
-      postCount,
-    })
+  const stats = {
+    totalCoders,
+    totalPosts,
+    postsToday,
+    postsWeek,
+    activeCoders: activeCounts.size,
+    newCoders,
   }
 
-  return { updates, stats, active, discoverProfiles }
+  // Discover profiles: batch query — get feeds with post counts
+  const allFeeds = await db
+    .select({
+      id: feeds.id,
+      slug: feeds.slug,
+      postCount: sql<number>`(SELECT COUNT(*)::int FROM ${updates} WHERE ${updates.feedId} = ${feeds.id})`,
+    })
+    .from(feeds)
+
+  const candidates = allFeeds
+    .filter(f => f.postCount > 0)
+    .map(f => ({ ...f, sort: Math.random() }))
+    .sort((a, b) => a.sort - b.sort)
+    .slice(0, 3)
+
+  let discoverProfiles: { slug: string; latestProject: string; latestContent: string; postCount: number }[] = []
+
+  if (candidates.length > 0) {
+    const candidateIds = candidates.map(c => c.id)
+    const latestUpdates = await db
+      .select({
+        feedId: updates.feedId,
+        projectName: updates.projectName,
+        content: updates.content,
+        createdAt: updates.createdAt,
+      })
+      .from(updates)
+      .where(inArray(updates.feedId, candidateIds))
+      .orderBy(desc(updates.createdAt))
+
+    const latestByFeed = new Map<string, { projectName: string; content: string }>()
+    latestUpdates.forEach(u => {
+      if (!latestByFeed.has(u.feedId)) {
+        latestByFeed.set(u.feedId, { projectName: u.projectName, content: u.content })
+      }
+    })
+
+    discoverProfiles = candidates.map(c => ({
+      slug: c.slug,
+      latestProject: latestByFeed.get(c.id)?.projectName ?? '',
+      latestContent: latestByFeed.get(c.id)?.content ?? '',
+      postCount: c.postCount,
+    }))
+  }
+
+  return { updates: updatesList, stats, active, discoverProfiles }
 }
 
 export default async function Home() {
@@ -149,13 +174,13 @@ export default async function Home() {
 
   return (
     <main className="max-w-3xl mx-auto px-6 py-16">
-      {/* Hero Section */}
+      {/* Hero */}
       <header className="mb-16 text-center">
-        <div className="mb-4 flex justify-center" style={{ willChange: 'transform' }}>
+        <div className="mb-4 flex justify-center">
           <CrabMascot size={140} />
         </div>
 
-        <h1 className="font-display text-5xl md:text-6xl font-bold mb-6 tracking-tight" style={{ willChange: 'transform' }}>
+        <h1 className="font-display text-5xl md:text-6xl font-bold mb-6 tracking-tight">
           <span className="text-gradient">Clawding</span>
         </h1>
 
@@ -173,50 +198,68 @@ export default async function Home() {
             /clawding
           </code>
           {' '}in Claude Code
-          {' '}&middot;{' '}
-          <a
+        </p>
+        <p className="text-muted mt-2 text-sm">
+          <Link
             href="/guide"
             className="text-secondary hover:text-primary transition-colors underline underline-offset-2"
           >
             Read the guide
-          </a>
+          </Link>
         </p>
       </header>
 
-      {/* Community Stats */}
+      {/* Activity Numbers */}
       <section className="mb-16">
-        <SectionHeader title="Community" />
-        <StatsBar initialStats={stats} />
+        <SectionHeader title="Activity" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <StatCard value={stats.totalCoders} label="Coders" />
+          <StatCard value={stats.totalPosts} label="Total Posts" />
+          <StatCard value={stats.postsToday} label="Today" highlight />
+          <StatCard value={stats.postsWeek} label="This Week" />
+          <StatCard value={stats.activeCoders} label="Active (7d)" />
+          <StatCard value={stats.newCoders} label="New Coders (7d)" />
+        </div>
       </section>
 
       {/* Recent Updates */}
       <section className="mb-16">
         <SectionHeader title="Recent Updates" />
         <div className="bg-surface rounded-2xl border border-border p-6">
-          <div className="divide-y divide-border">
-            {updates.map(u => (
-              <UpdateCard
-                key={u.id}
-                slug={u.slug}
-                project={u.project}
-                content={u.content}
-                created_at={u.created_at}
-                showSlug
-              />
-            ))}
-          </div>
-          <div className="text-center pt-4 border-t border-border mt-2">
-            <a
-              href="/feed"
-              className="text-coral hover:text-coral-bright text-sm font-medium transition-colors"
-            >
-              View all updates &rarr;
-            </a>
-          </div>
+          {updates.length === 0 ? (
+            <div className="text-muted text-center py-12">
+              <p className="mb-2">No updates yet.</p>
+              <p className="text-cyan">Be the first to post!</p>
+            </div>
+          ) : (
+            <>
+              <div className="divide-y divide-border">
+                {updates.map(u => (
+                  <UpdateCard
+                    key={u.id}
+                    slug={u.slug}
+                    parentSlug={u.parentSlug ?? undefined}
+                    project={u.project}
+                    content={u.content}
+                    created_at={u.created_at}
+                    showSlug
+                  />
+                ))}
+              </div>
+              <div className="text-center pt-4 border-t border-border mt-2">
+                <Link
+                  href="/feed"
+                  className="text-coral hover:text-coral-bright text-sm font-medium transition-colors"
+                >
+                  View all updates &rarr;
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
-      {/* Most Active Coders */}
+      {/* Most Active This Week */}
       <section className="mb-16">
         <SectionHeader title="Most Active This Week" />
         <div className="bg-surface rounded-2xl border border-border p-4">
@@ -224,11 +267,22 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Discover Profiles */}
+      {/* Discover */}
       <section className="mb-16">
         <SectionHeader title="Discover" />
         <DiscoverProfiles initialProfiles={discoverProfiles} />
       </section>
     </main>
+  )
+}
+
+function StatCard({ value, label, highlight }: { value: number; label: string; highlight?: boolean }) {
+  return (
+    <div className={`bg-surface border rounded-xl p-4 text-center ${highlight ? 'border-border-accent' : 'border-border'}`}>
+      <div className={`font-display text-2xl font-bold mb-1 ${highlight ? 'text-coral-bright' : 'text-coral'}`}>
+        {value.toLocaleString()}
+      </div>
+      <div className="text-muted text-sm">{label}</div>
+    </div>
   )
 }

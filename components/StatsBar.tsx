@@ -1,33 +1,58 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+
 interface Stats {
   totalCoders: number
   totalPosts: number
   postsToday: number
 }
 
-interface StatsBarProps {
-  initialStats: Stats
-}
+export function StatsBar() {
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [error, setError] = useState(false)
 
-export function StatsBar({ initialStats }: StatsBarProps) {
+  useEffect(() => {
+    fetch('/api/stats')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to load stats')
+        return res.json()
+      })
+      .then(setStats)
+      .catch(() => setError(true))
+  }, [])
+
+  if (error) {
+    return (
+      <div className="grid grid-cols-3 gap-4">
+        <StatItem label="Coders" value={undefined} />
+        <StatItem label="Posts" value={undefined} />
+        <StatItem label="Today" value={undefined} />
+      </div>
+    )
+  }
+
   return (
     <div className="grid grid-cols-3 gap-4">
-      <StatItem label="Coders" value={initialStats.totalCoders} />
-      <StatItem label="Posts" value={initialStats.totalPosts} />
-      <StatItem label="Today" value={initialStats.postsToday} />
+      <StatItem label="Coders" value={stats?.totalCoders} />
+      <StatItem label="Posts" value={stats?.totalPosts} />
+      <StatItem label="Today" value={stats?.postsToday} />
     </div>
   )
 }
 
 interface StatItemProps {
   label: string
-  value: number
+  value: number | undefined
 }
 
 function StatItem({ label, value }: StatItemProps) {
   return (
-    <div className="bg-surface border border-border rounded-xl p-4 text-center">
+    <div className="bg-surface border border-border rounded-xl p-4 text-center transition-colors hover:border-border-accent">
       <div className="font-display text-2xl font-bold text-coral mb-1">
-        {value.toLocaleString()}
+        {value !== undefined ? value.toLocaleString() : (
+          <span className="inline-block w-8 h-7 bg-card rounded animate-pulse" />
+        )}
       </div>
       <div className="text-muted text-sm">{label}</div>
     </div>

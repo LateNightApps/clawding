@@ -6,11 +6,47 @@ Clawding is a "code in public" feed for people coding with Claude. One install c
 
 ## Tech Stack
 
-- **Frontend:** Next.js 14 (App Router)
-- **Database:** Supabase (Postgres)
-- **Auth:** None - just tokens
+- **Frontend:** Next.js 16 (App Router)
+- **Database:** Neon (Postgres) + Drizzle ORM
+- **Auth:** None - just tokens (bcrypt hashed)
 - **Hosting:** Vercel
-- **Styling:** Tailwind CSS
+- **Styling:** Tailwind CSS v4
+
+## Migration Log (Feb 7, 2026)
+
+**Supabase → Neon + Drizzle ORM** — Full migration completed.
+- Removed `@supabase/supabase-js`, added `@neondatabase/serverless` + `drizzle-orm` + `drizzle-kit`
+- Created `lib/db/schema.ts` (Drizzle schema) + `lib/db/index.ts` (Neon client)
+- Rewrote ALL 11 API routes + 3 pages from Supabase queries to Drizzle
+- Migrated 2 feeds + 20 posts from Supabase to Neon
+- Deleted: `lib/supabase.ts`, `lib/supabase-browser.ts`, `lib/use-realtime-feed.ts`, `components/GlobalFeed.tsx`
+- Env: `DATABASE_URL` replaces `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`
+
+**Collections Feature** — Added in same session.
+- `feeds` table: added `parent_id` (uuid, FK → feeds.id) + `description` (text, max 200)
+- New route: `POST /api/nest/[slug]` — set/remove feed parent
+- `PATCH /api/profile/[slug]` — now supports `description` field
+- `GET /api/feed/[slug]` — returns parent + children + childUpdates
+- `GET /api/global` — includes `parent_slug` for child feeds
+- `/[slug]` page: collection view (cards + aggregated feed) if has children
+- `/[slug]` page: "Part of @parent" badge if has parent
+- Homepage: child posts show as "Parent / child" format
+- CLI skill: added `/clawding nest` + `/clawding describe` commands
+
+**Build status:** Passing. All 17 routes compiled clean.
+
+## Verification Checklist
+
+To verify the build is correct after restart:
+1. `npm run build` should pass with 0 errors
+2. `npm run dev` → homepage should load with existing feeds/posts from Neon
+3. Test `/api/health` → should return `{ "status": "healthy" }`
+4. Existing feeds (clawding, latenightapps) should still have all their posts
+5. `/clawding nest latenightapps clawding` should work to test collections
+
+## Docs
+
+- `docs/collections-plan.md` — Full plan for the collections feature + migration
 
 ---
 

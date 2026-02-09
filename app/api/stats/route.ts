@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { db } from '@/lib/db'
+import { feeds, updates } from '@/lib/db/schema'
+import { count, gte } from 'drizzle-orm'
 import { errorResponse } from '@/lib/api-utils'
 
 interface StatsResponse {
@@ -14,22 +16,15 @@ export async function GET() {
     todayStart.setUTCHours(0, 0, 0, 0)
 
     const [codersResult, postsResult, postsTodayResult] = await Promise.all([
-      supabase.from('feeds').select('*', { count: 'exact', head: true }),
-      supabase.from('updates').select('*', { count: 'exact', head: true }),
-      supabase
-        .from('updates')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', todayStart.toISOString()),
+      db.select({ value: count() }).from(feeds),
+      db.select({ value: count() }).from(updates),
+      db.select({ value: count() }).from(updates).where(gte(updates.createdAt, todayStart)),
     ])
 
-    if (codersResult.error) throw codersResult.error
-    if (postsResult.error) throw postsResult.error
-    if (postsTodayResult.error) throw postsTodayResult.error
-
     const stats: StatsResponse = {
-      totalCoders: codersResult.count ?? 0,
-      totalPosts: postsResult.count ?? 0,
-      postsToday: postsTodayResult.count ?? 0,
+      totalCoders: codersResult[0]?.value ?? 0,
+      totalPosts: postsResult[0]?.value ?? 0,
+      postsToday: postsTodayResult[0]?.value ?? 0,
     }
 
     return NextResponse.json(stats, {

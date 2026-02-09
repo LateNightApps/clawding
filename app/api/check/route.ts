@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { db } from '@/lib/db'
+import { feeds } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { validateSlug, generateSuggestions } from '@/lib/utils'
 import { parseJsonBody, errorResponse, rateLimit, getClientIp, ApiError } from '@/lib/api-utils'
 
@@ -7,7 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     // Rate limit: 30 checks per minute per IP
     const ip = getClientIp(request)
-    const { allowed } = rateLimit(`check:${ip}`, 30, 60000)
+    const { allowed } = await rateLimit(`check:${ip}`, 30, 60000)
     if (!allowed) {
       throw new ApiError('Too many requests', 429, 'rate_limited')
     }
@@ -24,11 +26,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ available: false, error: validation.error }, { status: 400 })
     }
 
-    const { data: existing } = await supabase
-      .from('feeds')
-      .select('id')
-      .eq('slug', slug)
-      .single()
+    const [existing] = await db
+      .select({ id: feeds.id })
+      .from(feeds)
+      .where(eq(feeds.slug, slug))
+      .limit(1)
 
     if (existing) {
       return NextResponse.json({

@@ -1,27 +1,13 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { db } from '@/lib/db'
+import { sql } from 'drizzle-orm'
 
 export async function GET() {
   const start = Date.now()
 
   try {
     // Check database connectivity
-    const { error } = await supabase
-      .from('feeds')
-      .select('id')
-      .limit(1)
-
-    if (error) {
-      return NextResponse.json(
-        {
-          status: 'unhealthy',
-          database: 'error',
-          error: 'Database query failed',
-          timestamp: new Date().toISOString()
-        },
-        { status: 503 }
-      )
-    }
+    await db.execute(sql`SELECT 1`)
 
     const latency = Date.now() - start
 

@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
-import { validateXHandle, cleanXHandle, validateWebsiteUrl } from '@/lib/utils'
+import { db } from '@/lib/db'
+import { feeds } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
+import { validateXHandle, cleanXHandle, validateWebsiteUrl, sanitizeContent } from '@/lib/utils'
 import { parseJsonBody, errorResponse, ApiError } from '@/lib/api-utils'
 import { authenticateRequest } from '@/lib/auth'
 
 interface ProfileBody {
   x_handle?: string
   website_url?: string
+  description?: string
+  email?: string
 }
 
 export async function PATCH(
@@ -19,7 +23,7 @@ export async function PATCH(
 
     const body = await parseJsonBody<ProfileBody>(request)
 
-    const updates: Record<string, string | null> = {}
+    const updateData: Record<string, string | null> = {}
 
     if ('x_handle' in body) {
       if (body.x_handle) {
@@ -27,9 +31,9 @@ export async function PATCH(
         if (!validation.valid) {
           throw new ApiError(validation.error ?? 'Invalid X handle', 400, 'invalid_x_handle')
         }
-        updates.x_handle = cleanXHandle(body.x_handle)
+        updateData.xHandle = cleanXHandle(body.x_handle)
       } else {
-        updates.x_handle = null
+        updateData.xHandle = null
       }
     }
 
@@ -39,27 +43,47 @@ export async function PATCH(
         if (!validation.valid) {
           throw new ApiError(validation.error ?? 'Invalid website URL', 400, 'invalid_website_url')
         }
-        updates.website_url = body.website_url
+        updateData.websiteUrl = body.website_url
       } else {
-        updates.website_url = null
+        updateData.websiteUrl = null
       }
     }
 
-    if (Object.keys(updates).length === 0) {
+    if ('description' in body) {
+      if (body.description) {
+        // Sanitize description with same pattern as content
+        const sanitized = sanitizeContent(body.description).slice(0, 200)
+        if (!sanitized) {
+          throw new ApiError('Description cannot be empty', 400, 'empty_description')
+        }
+        updateData.description = sanitized
+      } else {
+        updateData.description = null
+      }
+    }
+
+    if ('email' in body) {
+      if (body.email) {
+        const e = body.email.trim().toLowerCase()
+        if (e.length > 254 || !e.includes('@')) {
+          throw new ApiError('Invalid email address', 400, 'invalid_email')
+        }
+        updateData.email = e
+      } else {
+        updateData.email = null
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
       throw new ApiError('No fields to update', 400, 'no_fields')
     }
 
-    const { error } = await supabase
-      .from('feeds')
-      .update(updates)
-      .eq('id', feedId)
+    await db
+      .update(feeds)
+      .set(updateData)
+      .where(eq(feeds.id, feedId))
 
-    if (error) {
-      console.error('Error updating profile:', error)
-      throw new ApiError('Failed to update profile', 500, 'update_failed')
-    }
-
-    return NextResponse.json({ success: true, updated: Object.keys(updates) })
+    return NextResponse.json({ success: true, updated: Object.keys(updateData) })
   } catch (error) {
     return errorResponse(error)
   }

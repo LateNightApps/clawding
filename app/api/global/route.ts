@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
-import { errorResponse, ApiError } from '@/lib/api-utils'
+import { db } from '@/lib/db'
+import { feeds, updates } from '@/lib/db/schema'
+import { desc, eq, inArray } from 'drizzle-orm'
+import { errorResponse } from '@/lib/api-utils'
 
 const DEFAULT_LIMIT = 10
 const MAX_LIMIT = 50
-
-interface UpdateRow {
-  id: string
-  project_name: string
-  content: string
-  created_at: string
-  feeds: { slug: string } | { slug: string }[]
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,33 +16,44 @@ export async function GET(request: NextRequest) {
     )
     const offset = Math.max(0, parseInt(searchParams.get('offset') ?? '0', 10) || 0)
 
-    const { data: updates, error } = await supabase
-      .from('updates')
-      .select(`
-        id,
-        project_name,
-        content,
-        created_at,
-        feeds!inner(slug)
-      `)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
+    // Get updates joined with feed slugs in a single query
+    const updatesList = await db
+      .select({
+        id: updates.id,
+        feedId: updates.feedId,
+        projectName: updates.projectName,
+        content: updates.content,
+        createdAt: updates.createdAt,
+        slug: feeds.slug,
+        parentId: feeds.parentId,
+      })
+      .from(updates)
+      .innerJoin(feeds, eq(updates.feedId, feeds.id))
+      .orderBy(desc(updates.createdAt))
+      .limit(limit)
+      .offset(offset)
 
-    if (error) {
-      console.error('Error fetching global feed:', error)
-      throw new ApiError('Failed to fetch global feed', 500, 'db_error')
+    // Batch resolve parent slugs
+    const parentIds = [...new Set(updatesList.filter(u => u.parentId).map(u => u.parentId!))]
+    const parentSlugMap = new Map<string, string>()
+
+    if (parentIds.length > 0) {
+      const parents = await db
+        .select({ id: feeds.id, slug: feeds.slug })
+        .from(feeds)
+        .where(inArray(feeds.id, parentIds))
+
+      parents.forEach(p => parentSlugMap.set(p.id, p.slug))
     }
 
-    const mapped = (updates as UpdateRow[] | null)?.map(u => {
-      const feed = Array.isArray(u.feeds) ? u.feeds[0] : u.feeds
-      return {
-        id: u.id,
-        slug: feed.slug,
-        project: u.project_name,
-        content: u.content,
-        created_at: u.created_at,
-      }
-    }) ?? []
+    const mapped = updatesList.map(u => ({
+      id: u.id,
+      slug: u.slug,
+      project: u.projectName,
+      content: u.content,
+      created_at: u.createdAt,
+      parent_slug: u.parentId ? parentSlugMap.get(u.parentId) ?? null : null,
+    }))
 
     return NextResponse.json({
       updates: mapped,

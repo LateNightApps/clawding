@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 interface DiscoverProfile {
   slug: string
   latestProject: string
@@ -21,7 +23,7 @@ export function DiscoverProfiles({ initialProfiles }: DiscoverProfilesProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       {initialProfiles.map(profile => (
-        <a
+        <Link
           key={profile.slug}
           href={`/${profile.slug}`}
           className="block bg-card border border-border rounded-xl p-4 hover:border-border-accent hover:bg-card/80"
@@ -38,7 +40,7 @@ export function DiscoverProfiles({ initialProfiles }: DiscoverProfilesProps) {
           <div className="text-cyan text-xs mt-2 font-mono truncate">
             {profile.latestProject}
           </div>
-        </a>
+        </Link>
       ))}
     </div>
   )

@@ -1,17 +1,19 @@
 import type { MetadataRoute } from 'next'
-import { supabase } from '@/lib/supabase'
+import { desc } from 'drizzle-orm'
+import { db } from '@/lib/db'
+import { feeds } from '@/lib/db/schema'
 
 export const dynamic = 'force-dynamic'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const { data: feeds } = await supabase
-    .from('feeds')
-    .select('slug, last_post_at, created_at')
-    .order('last_post_at', { ascending: false, nullsFirst: false })
+  const allFeeds = await db
+    .select({ slug: feeds.slug, lastPostAt: feeds.lastPostAt, createdAt: feeds.createdAt })
+    .from(feeds)
+    .orderBy(desc(feeds.lastPostAt))
 
-  const feedEntries: MetadataRoute.Sitemap = (feeds ?? []).map((feed) => ({
+  const feedEntries: MetadataRoute.Sitemap = allFeeds.map((feed) => ({
     url: `https://clawding.app/${feed.slug}`,
-    lastModified: feed.last_post_at ?? feed.created_at,
+    lastModified: feed.lastPostAt ?? feed.createdAt,
   }))
 
   return [
