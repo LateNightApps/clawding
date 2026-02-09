@@ -6,7 +6,7 @@ import { CrabMascot } from '@/components/CrabMascot'
 import { ProjectFilter } from '@/components/ProjectFilter'
 import { db } from '@/lib/db'
 import { feeds, updates } from '@/lib/db/schema'
-import { eq, desc, count, sql } from 'drizzle-orm'
+import { and, eq, desc, count, sql } from 'drizzle-orm'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -63,7 +63,7 @@ async function getFeed(slug: string, projectFilter?: string) {
       createdAt: updates.createdAt,
     })
     .from(updates)
-    .where(conditions.length === 1 ? conditions[0] : sql`${conditions[0]} AND ${conditions[1]}`)
+    .where(and(...conditions))
     .orderBy(desc(updates.createdAt))
     .limit(PAGE_SIZE)
 
@@ -71,6 +71,39 @@ async function getFeed(slug: string, projectFilter?: string) {
     .select({ value: count() })
     .from(updates)
     .where(eq(updates.feedId, feed.id))
+
+  // Calculate posting streak (capped to 365-day window)
+  const streakWindow = new Date()
+  streakWindow.setUTCDate(streakWindow.getUTCDate() - 365)
+
+  const postDates = await db
+    .select({ date: sql<string>`DISTINCT DATE(${updates.createdAt} AT TIME ZONE 'UTC')` })
+    .from(updates)
+    .where(and(eq(updates.feedId, feed.id), sql`${updates.createdAt} >= ${streakWindow}`))
+    .orderBy(desc(sql`DATE(${updates.createdAt} AT TIME ZONE 'UTC')`))
+
+  let streak = 0
+  if (postDates.length > 0) {
+    const today = new Date()
+    today.setUTCHours(0, 0, 0, 0)
+    const yesterday = new Date(today)
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1)
+
+    const firstDate = new Date(postDates[0].date + 'T00:00:00Z')
+    if (firstDate.getTime() === today.getTime() || firstDate.getTime() === yesterday.getTime()) {
+      streak = 1
+      let expected = new Date(firstDate)
+      for (let i = 1; i < postDates.length; i++) {
+        expected.setUTCDate(expected.getUTCDate() - 1)
+        const d = new Date(postDates[i].date + 'T00:00:00Z')
+        if (d.getTime() === expected.getTime()) {
+          streak++
+        } else {
+          break
+        }
+      }
+    }
+  }
 
   return {
     slug: feed.slug,
@@ -86,6 +119,7 @@ async function getFeed(slug: string, projectFilter?: string) {
       created_at: u.createdAt.toISOString(),
     })),
     totalCount,
+    streak,
     filteredProject: projectFilter || null,
   }
 }
@@ -140,18 +174,9 @@ export default async function UserFeed({ params, searchParams }: PageProps) {
         )}
 
         <p className="text-muted mt-2">
-          Coding with Claude since{' '}
-          <span className="text-cyan">
-            {new Date(feed.created_at).toLocaleDateString('en-US', {
-              month: 'long',
-              year: 'numeric'
-            })}
-          </span>
-          {feed.totalCount > 0 && (
-            <span className="ml-2">
-              &middot; {feed.totalCount} {feed.totalCount === 1 ? 'post' : 'posts'}
-            </span>
-          )}
+          <span className="text-cyan">{feed.totalCount}</span> {feed.totalCount === 1 ? 'post' : 'posts'} &middot;{' '}
+          <span className="text-cyan">{feed.projects.length}</span> {feed.projects.length === 1 ? 'project' : 'projects'} &middot;{' '}
+          <span className="text-cyan">{feed.streak}</span> {feed.streak === 1 ? 'day' : 'days'} streak
         </p>
         {(feed.x_handle || feed.website_url) && (
           <div className="flex items-center gap-4 mt-3">
