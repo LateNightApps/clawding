@@ -15,14 +15,18 @@ export function UpdateCard({ slug, parentSlug, project, content, created_at, sho
     <div className="py-5 hover:bg-card/50 -mx-2 px-2 rounded-lg">
       <div className="flex items-center gap-2 text-sm mb-2">
         {showSlug && slug && (
-          <>
-            <Link
-              href={`/${slug}`}
-              className="text-coral hover:text-coral-bright font-medium transition-colors"
-            >
-              @{slug}
-            </Link>
-          </>
+          <Link
+            href={`/${slug}`}
+            className={`font-medium transition-colors ${
+              parentSlug && parentSlug === slug
+                ? 'text-coral hover:text-coral-bright'
+                : parentSlug
+                  ? 'text-cyan hover:text-primary'
+                  : 'text-coral hover:text-coral-bright'
+            }`}
+          >
+            @{slug}
+          </Link>
         )}
         {project.toLowerCase() !== slug?.toLowerCase() && (
           <>
