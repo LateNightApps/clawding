@@ -22,13 +22,6 @@ To verify the build is correct after restart:
 3. Test `/api/health` → should return `{ "status": "healthy" }`
 4. Existing feeds should still have all their posts
 
-## Docs
-
-- `docs/collections-plan.md` — Future feature: parent/child feed nesting (not implemented)
-- `docs/collections-concept.md` — Decision doc: why collections were shelved
-
----
-
 ## User Experience
 
 ### Install (one command)
@@ -439,8 +432,10 @@ Health check.
 
 ## Future (not MVP)
 
-- Auto-prompt hook after completing work
-- RSS feeds
-- Streak system
-- Embed widgets
-- Collections (parent/child feed nesting) — see docs/collections-concept.md
+- Coding activity heatmap on profile pages (GitHub-style contribution grid)
+- X auto cross-post (tweet every Clawding update from official account)
+- Streak system (consecutive days of posting, shown on profiles)
+- RSS feeds (`/[slug]/rss` endpoint)
+- Embeddable badge/widget for GitHub READMEs
+- Daily/weekly community digest page
+- Project pages (group posts across all users by project name)
