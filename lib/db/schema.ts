@@ -8,12 +8,10 @@ export const feeds = pgTable('feeds', {
   websiteUrl: text('website_url'),
   description: text('description'),
   email: text('email'),
-  parentId: uuid('parent_id').references((): any => feeds.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   lastPostAt: timestamp('last_post_at', { withTimezone: true }),
 }, (table) => [
   uniqueIndex('idx_feeds_slug').on(table.slug),
-  index('idx_feeds_parent_id').on(table.parentId),
 ])
 
 export const updates = pgTable('updates', {

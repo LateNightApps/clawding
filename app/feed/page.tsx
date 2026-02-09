@@ -7,7 +7,6 @@ import { CrabMascot } from '@/components/CrabMascot'
 interface Update {
   id: string
   slug: string
-  parent_slug: string | null
   project: string
   content: string
   created_at: string
@@ -112,7 +111,6 @@ export default function FeedPage() {
                 <UpdateCard
                   key={update.id}
                   slug={update.slug}
-                  parentSlug={update.parent_slug ?? undefined}
                   project={update.project}
                   content={update.content}
                   created_at={update.created_at}

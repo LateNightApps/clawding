@@ -27,7 +27,7 @@ async function getHomePageData() {
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-  // Global feed (latest 10) with feed slug + parentId
+  // Global feed (latest 10)
   const globalFeedResult = await db
     .select({
       id: updates.id,
@@ -35,30 +35,15 @@ async function getHomePageData() {
       content: updates.content,
       createdAt: updates.createdAt,
       slug: feeds.slug,
-      feedId: feeds.id,
-      parentId: feeds.parentId,
     })
     .from(updates)
     .innerJoin(feeds, eq(updates.feedId, feeds.id))
     .orderBy(desc(updates.createdAt))
     .limit(10)
 
-  // Batch resolve parent slugs
-  const parentIds = [...new Set(globalFeedResult.filter(u => u.parentId).map(u => u.parentId!))]
-  const parentSlugMap = new Map<string, string>()
-  if (parentIds.length > 0) {
-    const parentFeedsResult = await db
-      .select({ id: feeds.id, slug: feeds.slug })
-      .from(feeds)
-      .where(inArray(feeds.id, parentIds))
-
-    parentFeedsResult.forEach(p => parentSlugMap.set(p.id, p.slug))
-  }
-
   const updatesList = globalFeedResult.map(u => ({
     id: u.id,
     slug: u.slug,
-    parentSlug: u.parentId ? parentSlugMap.get(u.parentId) ?? null : null,
     project: u.projectName,
     content: u.content,
     created_at: u.createdAt.toISOString(),
@@ -121,17 +106,19 @@ async function getHomePageData() {
     newCoders,
   }
 
-  // Discover profiles: batch query — get feeds with post counts
-  const allFeeds = await db
+  // Discover profiles: get feeds that have posts
+  const feedsWithCounts = await db
     .select({
       id: feeds.id,
       slug: feeds.slug,
-      postCount: sql<number>`(SELECT COUNT(*)::int FROM ${updates} WHERE ${updates.feedId} = ${feeds.id})`,
+      postCount: count(updates.id),
     })
     .from(feeds)
+    .leftJoin(updates, eq(updates.feedId, feeds.id))
+    .groupBy(feeds.id, feeds.slug)
+    .having(sql`count(${updates.id}) > 0`)
 
-  const candidates = allFeeds
-    .filter(f => f.postCount > 0)
+  const candidates = feedsWithCounts
     .map(f => ({ ...f, sort: Math.random() }))
     .sort((a, b) => a.sort - b.sort)
     .slice(0, 3)
@@ -238,7 +225,6 @@ export default async function Home() {
                   <UpdateCard
                     key={u.id}
                     slug={u.slug}
-                    parentSlug={u.parentSlug ?? undefined}
                     project={u.project}
                     content={u.content}
                     created_at={u.created_at}

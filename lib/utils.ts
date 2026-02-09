@@ -96,6 +96,26 @@ export function validateWebsiteUrl(url: string): { valid: boolean; error?: strin
   return { valid: true }
 }
 
+// Consistent color for a slug — each project gets its own auto-assigned color
+const SLUG_COLORS = [
+  '#5eead4', // teal
+  '#c084fc', // purple
+  '#60a5fa', // blue
+  '#fb923c', // orange
+  '#f472b6', // pink
+  '#fbbf24', // amber
+  '#f472b6', // pink
+  '#fbbf24', // amber
+]
+
+export function slugColor(slug: string): string {
+  let hash = 0
+  for (let i = 0; i < slug.length; i++) {
+    hash = ((hash << 5) - hash + slug.charCodeAt(i)) | 0
+  }
+  return SLUG_COLORS[Math.abs(hash) % SLUG_COLORS.length]
+}
+
 export function generateSuggestions(slug: string): string[] {
   const suffixes = ['dev', 'codes', 'builds', 'ships', '99', 'io', 'hq']
   return suffixes

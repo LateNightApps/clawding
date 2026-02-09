@@ -11,29 +11,8 @@ Clawding is a "code in public" feed for people coding with Claude. One install c
 - **Auth:** None - just tokens (bcrypt hashed)
 - **Hosting:** Vercel
 - **Styling:** Tailwind CSS v4
-
-## Migration Log (Feb 7, 2026)
-
-**Supabase → Neon + Drizzle ORM** — Full migration completed.
-- Removed `@supabase/supabase-js`, added `@neondatabase/serverless` + `drizzle-orm` + `drizzle-kit`
-- Created `lib/db/schema.ts` (Drizzle schema) + `lib/db/index.ts` (Neon client)
-- Rewrote ALL 11 API routes + 3 pages from Supabase queries to Drizzle
-- Migrated 2 feeds + 20 posts from Supabase to Neon
-- Deleted: `lib/supabase.ts`, `lib/supabase-browser.ts`, `lib/use-realtime-feed.ts`, `components/GlobalFeed.tsx`
-- Env: `DATABASE_URL` replaces `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`
-
-**Collections Feature** — Added in same session.
-- `feeds` table: added `parent_id` (uuid, FK → feeds.id) + `description` (text, max 200)
-- New route: `POST /api/nest/[slug]` — set/remove feed parent
-- `PATCH /api/profile/[slug]` — now supports `description` field
-- `GET /api/feed/[slug]` — returns parent + children + childUpdates
-- `GET /api/global` — includes `parent_slug` for child feeds
-- `/[slug]` page: collection view (cards + aggregated feed) if has children
-- `/[slug]` page: "Part of @parent" badge if has parent
-- Homepage: child posts show as "Parent / child" format
-- CLI skill: added `/clawding nest` + `/clawding describe` commands
-
-**Build status:** Passing. All 17 routes compiled clean.
+- **Rate Limiting:** Upstash Redis
+- **Email:** Resend (for token recovery codes)
 
 ## Verification Checklist
 
@@ -41,12 +20,12 @@ To verify the build is correct after restart:
 1. `npm run build` should pass with 0 errors
 2. `npm run dev` → homepage should load with existing feeds/posts from Neon
 3. Test `/api/health` → should return `{ "status": "healthy" }`
-4. Existing feeds (clawding, latenightapps) should still have all their posts
-5. `/clawding nest latenightapps clawding` should work to test collections
+4. Existing feeds should still have all their posts
 
 ## Docs
 
-- `docs/collections-plan.md` — Full plan for the collections feature + migration
+- `docs/collections-plan.md` — Future feature: parent/child feed nesting (not implemented)
+- `docs/collections-concept.md` — Decision doc: why collections were shelved
 
 ---
 
@@ -61,7 +40,7 @@ curl -sL clawding.app/i | bash
 Output:
 ```
 ✓ Clawding installed!
-  Run /clawding in Claude Code to get started.
+  Type /clawding now to claim your username and start posting.
 ```
 
 ### First Run (setup happens automatically)
@@ -71,7 +50,7 @@ Output:
 
 Welcome to Clawding! Let's get you set up.
 
-What username do you want?
+What name do you want for your feed?
 
 > brandon
 
@@ -81,16 +60,29 @@ Available: brandon99, brandonbuilds, brandoncodes
 
 > brandonbuilds
 
+What's your email? (for token recovery if you ever lose it)
+
+> brandon@email.com
+
 Claiming brandonbuilds... done!
-Saved your credentials.
+Recovery email saved!
 
-Your feed: clawding.app/brandonbuilds
+Your feed is at clawding.app/brandonbuilds
 
-What did you build? (or I can look at this session)
+What did you build? (or I can summarize this session)
 
 > just set this up lol
 
-Posted! clawding.app/brandonbuilds
+Posted! View at clawding.app/brandonbuilds
+
+Here's what you can do:
+  /clawding                  Post an update (or I'll summarize your session)
+  /clawding Fixed the bug    Post with a custom message
+  /clawding profile          Set your description, X handle, or website
+  /clawding delete           Delete your last post
+  /clawding feeds            See all your feeds
+  /clawding new              Create another feed
+  /clawding recover          Recover if you lose your token
 ```
 
 ### Every Run After
@@ -115,111 +107,35 @@ clawding.app/brandonbuilds
 
 ---
 
-## Install Script
-
-**Hosted at:** `https://clawding.app/i`
-
-```bash
-#!/bin/bash
-mkdir -p ~/.claude/skills/clawding
-curl -so ~/.claude/skills/clawding/SKILL.md https://clawding.app/skill.md
-echo "✓ Clawding installed!"
-echo "  Run /clawding in Claude Code to get started."
-```
-
----
-
-## The Skill File
-
-**Hosted at:** `https://clawding.app/skill.md`
-
-```markdown
----
-name: clawding
-description: Post updates about what you're coding with Claude to your public Clawding feed
----
-
-# Clawding
-
-## If CLAWDING_TOKEN is not set (first time setup):
-
-1. Welcome them: "Welcome to Clawding! Let's get you set up."
-2. Ask: "What username do you want?"
-3. POST to https://clawding.app/api/check with {"slug": "USERNAME"} to check availability
-4. If taken, show alternatives from the response and ask again
-5. Once they pick an available one, POST to https://clawding.app/api/claim with {"slug": "USERNAME"}
-6. Get back the token
-7. Save to their settings by adding to ~/.claude/settings.json:
-   - Add "env": {"CLAWDING_TOKEN": "token", "CLAWDING_SLUG": "username"}
-8. Confirm: "Your feed: clawding.app/USERNAME"
-9. Ask what they want to post, or offer to summarize the session
-
-## If CLAWDING_TOKEN is set (normal usage):
-
-1. If they provided a message (/clawding Fixed the bug), use that
-2. If no message, look at the conversation and write a 1-2 sentence summary
-   - Write for humans: "Added user login" not "implemented OAuth2 flow"
-3. Get the project name from the current folder/repo
-4. POST to https://clawding.app/api/post/$CLAWDING_SLUG:
-   - Header: Authorization: Bearer $CLAWDING_TOKEN
-   - Body: {"project": "PROJECT", "update": "MESSAGE"}
-5. Confirm: "Posted! clawding.app/$CLAWDING_SLUG"
-
-## Error handling:
-
-- If the API returns unauthorized, tell them to run /clawding setup to reconfigure
-- If rate limited, tell them they've hit 50 posts/day limit
-```
-
----
-
-## Database Schema (Supabase)
+## Database Schema (Neon + Drizzle)
 
 ### Table: feeds
 
-```sql
-create table feeds (
-  id uuid default gen_random_uuid() primary key,
-  slug text unique not null,
-  token_hash text not null,
-  x_handle text,
-  website_url text,
-  created_at timestamp with time zone default now(),
-  last_post_at timestamp with time zone
-);
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK, auto-generated |
+| slug | text | Unique, not null |
+| token_hash | text | bcrypt hash, not null |
+| x_handle | text | Optional |
+| website_url | text | Optional |
+| description | text | Optional, max 200 chars |
+| email | text | Optional, for token recovery |
+| created_at | timestamptz | Default now() |
+| last_post_at | timestamptz | Updated on each post |
 
-create index idx_feeds_slug on feeds(slug);
-```
+Indexes: `idx_feeds_slug` (unique)
 
 ### Table: updates
 
-```sql
-create table updates (
-  id uuid default gen_random_uuid() primary key,
-  feed_id uuid references feeds(id) on delete cascade,
-  project_name text not null,
-  content text not null,
-  created_at timestamp with time zone default now()
-);
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK, auto-generated |
+| feed_id | uuid | FK → feeds.id, cascade delete |
+| project_name | text | Not null |
+| content | text | Not null, max 500 chars |
+| created_at | timestamptz | Default now() |
 
-create index idx_updates_feed_id on updates(feed_id);
-create index idx_updates_created_at on updates(created_at desc);
-```
-
-### Row Level Security
-
-```sql
-alter table feeds enable row level security;
-alter table updates enable row level security;
-
--- Public read access (anon key can read feeds and updates)
-create policy "Allow read feeds" on feeds for select using (true);
-create policy "Allow read updates" on updates for select using (true);
-
--- Block anonymous inserts (API routes use the service role key, which bypasses RLS)
-create policy "Deny anon insert feeds" on feeds for insert with check (false);
-create policy "Deny anon insert updates" on updates for insert with check (false);
-```
+Indexes: `idx_updates_feed_id`, `idx_updates_created_at`
 
 ---
 
@@ -250,11 +166,11 @@ Check if a slug is available, suggest alternatives if not.
 
 ### POST /api/claim
 
-Claim a slug and get a token.
+Claim a slug and get a token. Optionally set a recovery email.
 
 **Request:**
 ```json
-{"slug": "brandonbuilds"}
+{"slug": "brandonbuilds", "email": "brandon@email.com"}
 ```
 
 **Response (success):**
@@ -310,7 +226,7 @@ Authorization: Bearer TOKEN
 
 ### PATCH /api/profile/[slug]
 
-Update a feed's profile (X handle, website).
+Update a feed's profile (description, X handle, website, email).
 
 **Headers:**
 ```
@@ -321,21 +237,25 @@ Authorization: Bearer TOKEN
 ```json
 {
   "x_handle": "clawding",
-  "website_url": "https://clawding.app"
+  "website_url": "https://clawding.app",
+  "description": "Building cool stuff with Claude",
+  "email": "me@example.com"
 }
 ```
 
 **Response:**
 ```json
-{"success": true, "updated": ["x_handle", "website_url"]}
+{"success": true, "updated": ["x_handle", "website_url", "description", "email"]}
 ```
 
 **Logic:**
 1. Authenticate via token
 2. Validate x_handle (alphanumeric + underscores, max 15 chars, strip leading @)
 3. Validate website_url (must be https://, max 200 chars)
-4. Both fields optional — send only what you want to change
-5. Send empty string to clear a field
+4. Validate description (max 200 chars, sanitized)
+5. Validate email (must contain @, max 254 chars)
+6. All fields optional — send only what you want to change
+7. Send empty string to clear a field
 
 ### GET /api/feed/[slug]
 
@@ -347,27 +267,121 @@ Get a user's updates.
   "slug": "brandon",
   "x_handle": "brandon",
   "website_url": "https://brandon.dev",
+  "description": "Building cool stuff",
   "updates": [
-    {"project": "myapp", "content": "Added dark mode", "created_at": "2025-01-25T10:30:00Z"}
+    {"id": "uuid", "project": "myapp", "content": "Added dark mode", "created_at": "2025-01-25T10:30:00Z"}
   ]
 }
 ```
 
 ### GET /api/global
 
-Get recent updates from everyone.
+Get recent updates from everyone. Supports pagination.
+
+**Query params:** `?limit=10&offset=0` (max limit: 50)
 
 **Response:**
 ```json
 {
   "updates": [
-    {"slug": "brandon", "project": "myapp", "content": "Added dark mode", "created_at": "..."},
-    {"slug": "sarah", "project": "taskapp", "content": "Fixed login bug", "created_at": "..."}
-  ]
+    {"id": "uuid", "slug": "brandon", "project": "myapp", "content": "Added dark mode", "created_at": "..."}
+  ],
+  "hasMore": true,
+  "offset": 0,
+  "limit": 10
 }
 ```
 
-Limit 100, paginate later.
+### DELETE /api/delete/[slug]
+
+Delete the most recent post. GET to preview, DELETE to confirm.
+
+**Headers:**
+```
+Authorization: Bearer TOKEN
+```
+
+**GET Response:**
+```json
+{
+  "success": true,
+  "post": {"project": "myapp", "content": "Added dark mode", "created_at": "..."}
+}
+```
+
+**DELETE Response:**
+```json
+{
+  "success": true,
+  "deleted": {"project": "myapp", "content": "Added dark mode", "created_at": "..."}
+}
+```
+
+### POST /api/recover
+
+Request a recovery code via email.
+
+**Request:**
+```json
+{"email": "brandon@email.com"}
+```
+
+**Response (always generic to prevent enumeration):**
+```json
+{"success": true, "message": "If an account with this email exists, a recovery code has been sent."}
+```
+
+### POST /api/recover/verify
+
+Verify a recovery code and get a new token.
+
+**Request:**
+```json
+{"email": "brandon@email.com", "code": "123456"}
+```
+
+**Response:**
+```json
+{"success": true, "slug": "brandon", "token": "new-token-here"}
+```
+
+Recovery codes expire in 15 minutes. Max 5 failed attempts before code is invalidated.
+
+### GET /api/stats
+
+Platform statistics.
+
+**Response:**
+```json
+{"totalCoders": 42, "totalPosts": 350, "postsToday": 12}
+```
+
+### GET /api/active
+
+Top 5 most active feeds in the past 7 days.
+
+**Response:**
+```json
+{"active": [{"slug": "brandon", "postCount": 15}]}
+```
+
+### GET /api/discover
+
+3 random feeds with posts for discovery.
+
+**Response:**
+```json
+{"profiles": [{"slug": "brandon", "latestProject": "myapp", "latestContent": "Added dark mode", "postCount": 10}]}
+```
+
+### GET /api/health
+
+Health check.
+
+**Response:**
+```json
+{"status": "healthy", "database": "connected", "latency_ms": 12, "timestamp": "..."}
+```
 
 ---
 
@@ -384,31 +398,17 @@ Limit 100, paginate later.
 
 - All updates from this user
 - Filter by project
+- Each project gets its own auto-assigned color
 - Clean timeline view
 
----
+### /guide
 
-## File Structure
+- How to install and use Clawding
+- Command reference
 
-```
-/app
-  /page.tsx                    # Home + global feed
-  /[slug]/page.tsx             # User feed
-  /i/route.ts                  # GET - install script (bash)
-  /skill.md/route.ts           # GET - skill file
-  /api
-    /check/route.ts            # POST - check slug availability
-    /claim/route.ts            # POST - claim slug
-    /post/[slug]/route.ts      # POST - add update
-    /feed/[slug]/route.ts      # GET - user updates
-    /global/route.ts           # GET - all updates
-/lib
-  /supabase.ts
-  /utils.ts
-/components
-  /UpdateCard.tsx
-  /GlobalFeed.tsx
-```
+### /feed
+
+- Full global feed page
 
 ---
 
@@ -416,29 +416,31 @@ Limit 100, paginate later.
 
 - Hash tokens with bcrypt
 - Never return token_hash
-- Sanitize all content
+- Sanitize all content (max 500 chars, control chars removed)
 - Rate limit: 50 posts/day per feed
-- Rate limit claims by IP
+- Rate limit claims: 5/hour per IP
+- Rate limit checks: 30/minute per IP
+- Rate limit recovery: 5/hour per IP, 3/hour per email
 - HTTPS (Vercel default)
-- Service role key server-side only
+- Recovery codes hashed before storage, 15-min TTL, max 5 attempts
 
 ---
 
 ## Deploy
 
-1. Create Supabase project
-2. Run SQL schema
-3. Deploy to Vercel
-4. Add env vars: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-5. Done
+1. Create Neon project
+2. Set DATABASE_URL env var
+3. Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN env vars
+4. Set RESEND_API_KEY env var
+5. Deploy to Vercel
+6. Done
 
 ---
 
 ## Future (not MVP)
 
 - Auto-prompt hook after completing work
-- Token recovery via email
-- Profile bios
 - RSS feeds
 - Streak system
 - Embed widgets
+- Collections (parent/child feed nesting) — see docs/collections-concept.md

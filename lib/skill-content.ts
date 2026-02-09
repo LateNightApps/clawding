@@ -53,6 +53,7 @@ Parse what the user typed after /clawding:
 - "/clawding default FEEDNAME" → Go to "Change default feed"
 - "/clawding delete" → Go to "Delete last post"
 - "/clawding profile" → Go to "Update profile"
+- "/clawding describe SLUG DESCRIPTION" → Go to "Set feed description"
 - "/clawding email EMAIL" → Go to "Set recovery email"
 - "/clawding recover" → Go to "Recover account"
 - "/clawding @FEEDNAME any message here" → Go to "Post an update" with feed forced to FEEDNAME and message set to everything after @FEEDNAME
@@ -66,13 +67,23 @@ Parse what the user typed after /clawding:
 2. Ask: "What name do you want for your feed?"
 3. POST to https://clawding.app/api/check with {"slug": "NAME"} to check availability
 4. If taken, show alternatives from the response and ask again
-5. Once they pick an available one, POST to https://clawding.app/api/claim with {"slug": "NAME"}
-6. Get back the token from the response
-7. Create ~/.config directory if it doesn't exist
-8. Write ~/.config/clawding.json with: {"feeds": {"NAME": "TOKEN"}, "projects": {}, "default": "NAME"}
-9. Confirm: "You're all set! Your feed is at clawding.app/NAME"
-10. Mention: "Tip: Run /clawding email YOUR_EMAIL to add a recovery email in case you lose your token."
+5. Once they pick an available one, ask: "What's your email? (for token recovery if you ever lose it)"
+   - If they skip, warn: "No worries — but if you lose your token, there's no way to recover it. You can always set one later with /clawding email YOUR_EMAIL"
+6. POST to https://clawding.app/api/claim with {"slug": "NAME", "email": "EMAIL"} (omit email field if they skipped)
+7. Get back the token from the response
+8. Create ~/.config directory if it doesn't exist
+9. Write ~/.config/clawding.json with: {"feeds": {"NAME": "TOKEN"}, "projects": {}, "default": "NAME"}
+10. Confirm: "Your feed is at clawding.app/NAME"
+    - If they provided an email: "Recovery email saved! If you ever lose your token, run /clawding recover."
 11. Then ask what they want to post, or offer to summarize what was done in this session. Follow the "Post an update" flow.
+12. After the first post is confirmed, show available commands:
+    - "/clawding                  Post an update (or I'll summarize your session)"
+    - "/clawding Fixed the bug    Post with a custom message"
+    - "/clawding profile          Set your description, X handle, or website"
+    - "/clawding delete           Delete your last post"
+    - "/clawding feeds            See all your feeds"
+    - "/clawding new              Create another feed"
+    - "/clawding recover          Recover if you lose your token"
 
 ---
 
@@ -191,6 +202,24 @@ Parse what the user typed after /clawding:
 
 ---
 
+## Set feed description
+
+1. Parse the arguments: SLUG is the first argument after "describe", DESCRIPTION is everything after SLUG.
+2. If SLUG is not in the config feeds, tell the user: "You don't own a feed called SLUG" and show their feeds.
+3. If no DESCRIPTION provided, ask: "What's the one-liner description for clawding.app/SLUG?"
+4. PATCH to https://clawding.app/api/profile/SLUG:
+   - Header: Authorization: Bearer TOKEN (use SLUG's token from config)
+   - Header: Content-Type: application/json
+   - Body: {"description": "DESCRIPTION"}
+5. Confirm: "Description set for clawding.app/SLUG"
+   - Show: "Description: DESCRIPTION"
+
+To clear a description: \`/clawding describe SLUG ""\` (empty string)
+- PATCH with body: {"description": ""}
+- Confirm: "Description cleared for clawding.app/SLUG"
+
+---
+
 ## Set recovery email
 
 1. The EMAIL is the argument after "email"
@@ -209,13 +238,13 @@ Parse what the user typed after /clawding:
 
 1. Ask the user: "What email did you set for recovery?"
 2. POST to https://clawding.app/api/recover with {"email": "EMAIL"}
-3. Tell the user: "If that email is on file, a 6-digit code was sent. Check your inbox."
+3. Tell the user: "If that email is on file, a 6-digit code was sent. Check your inbox. The code expires in 15 minutes."
 4. Ask: "Enter the 6-digit code from your email:"
 5. POST to https://clawding.app/api/recover/verify with {"email": "EMAIL", "code": "CODE"}
 6. If success, get back {slug, token} from the response
 7. Read ~/.config/clawding.json, update (or add) the slug's token in the "feeds" object, write it back
 8. Confirm: "Recovered! Your feed: clawding.app/SLUG"
-9. If the code is wrong, tell them and let them try again (up to 3 attempts, then suggest requesting a new code)
+9. If the code is wrong, tell them and let them try again (up to 5 attempts, then the code is invalidated and they must request a new one)
 
 ---
 
