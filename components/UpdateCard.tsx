@@ -16,7 +16,7 @@ export function UpdateCard({ slug, parentSlug, project, content, created_at, sho
       <div className="flex items-center gap-2 text-sm mb-2">
         {showSlug && slug && (
           <>
-            {parentSlug && (
+            {parentSlug && parentSlug !== slug && (
               <>
                 <Link
                   href={`/${parentSlug}`}
