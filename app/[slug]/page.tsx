@@ -24,6 +24,7 @@ interface ChildFeed {
   id: string
   slug: string
   description: string | null
+  websiteUrl: string | null
   postCount: number
   latestProject: string | null
   latestContent: string | null
@@ -80,6 +81,7 @@ async function getFeed(slug: string) {
         id: feeds.id,
         slug: feeds.slug,
         description: feeds.description,
+        websiteUrl: feeds.websiteUrl,
         postCount: sql<number>`(SELECT COUNT(*)::int FROM ${updates} WHERE ${updates.feedId} = ${feeds.id})`,
         latestProject: sql<string | null>`(SELECT ${updates.projectName} FROM ${updates} WHERE ${updates.feedId} = ${feeds.id} ORDER BY ${updates.createdAt} DESC LIMIT 1)`,
         latestContent: sql<string | null>`(SELECT ${updates.content} FROM ${updates} WHERE ${updates.feedId} = ${feeds.id} ORDER BY ${updates.createdAt} DESC LIMIT 1)`,
@@ -92,14 +94,15 @@ async function getFeed(slug: string) {
       id: c.id,
       slug: c.slug,
       description: c.description,
+      websiteUrl: c.websiteUrl,
       postCount: c.postCount,
       latestProject: c.latestProject,
       latestContent: c.latestContent,
       latestDate: c.latestDate,
     }))
 
-    // Get aggregated updates from all children
-    const childIds = children.map(c => c.id)
+    // Get aggregated updates from parent + all children
+    const allFeedIds = [feed.id, ...children.map(c => c.id)]
     const aggregatedUpdates = await db
       .select({
         id: updates.id,
@@ -110,14 +113,14 @@ async function getFeed(slug: string) {
       })
       .from(updates)
       .innerJoin(feeds, eq(updates.feedId, feeds.id))
-      .where(inArray(updates.feedId, childIds))
+      .where(inArray(updates.feedId, allFeedIds))
       .orderBy(desc(updates.createdAt))
       .limit(PAGE_SIZE)
 
     const [{ value: totalCount }] = await db
       .select({ value: count() })
       .from(updates)
-      .where(inArray(updates.feedId, childIds))
+      .where(inArray(updates.feedId, allFeedIds))
 
     return {
       slug: feed.slug,
@@ -238,7 +241,7 @@ export default async function UserFeed({ params }: PageProps) {
         )}
 
         <p className="text-muted mt-2">
-          {feed.isCollection ? 'Collection created' : 'Coding with Claude since'}{' '}
+          Coding with Claude since{' '}
           <span className="text-cyan">
             {new Date(feed.created_at).toLocaleDateString('en-US', {
               month: 'long',
@@ -281,35 +284,46 @@ export default async function UserFeed({ params }: PageProps) {
       {feed.isCollection && feed.childFeeds.length > 0 && (
         <section className="mb-12">
           <h2 className="font-display text-xl font-semibold text-primary mb-4">
-            Feeds in this collection
+            Projects
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {feed.childFeeds.map((child) => (
-              <Link
+              <div
                 key={child.id}
-                href={`/${child.slug}`}
                 className="bg-surface border border-border rounded-xl p-4 hover:border-border-accent transition-colors"
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="font-display font-semibold text-primary">
-                    @{child.slug}
-                  </h3>
+                  <Link href={`/${child.slug}`} className="hover:opacity-80 transition-opacity">
+                    <h3 className="font-display font-semibold text-primary">
+                      @{child.slug}
+                    </h3>
+                  </Link>
                   <span className="text-xs text-muted bg-card px-2 py-0.5 rounded">
                     {child.postCount} {child.postCount === 1 ? 'post' : 'posts'}
                   </span>
                 </div>
                 {child.description && (
-                  <p className="text-sm text-secondary mb-3 line-clamp-2">
+                  <p className="text-sm text-secondary mb-2 line-clamp-2">
                     {child.description}
                   </p>
                 )}
+                {child.websiteUrl && (
+                  <a
+                    href={child.websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-cyan hover:text-primary text-sm transition-colors"
+                  >
+                    {new URL(child.websiteUrl).hostname.replace('www.', '')}
+                  </a>
+                )}
                 {child.latestContent && (
-                  <div className="text-sm">
+                  <div className="text-sm mt-3 pt-3 border-t border-border">
                     <p className="text-cyan font-medium truncate">{child.latestProject}</p>
                     <p className="text-muted line-clamp-2 mt-1">{child.latestContent}</p>
                   </div>
                 )}
-              </Link>
+              </div>
             ))}
           </div>
         </section>
@@ -318,7 +332,7 @@ export default async function UserFeed({ params }: PageProps) {
       <section className="bg-surface rounded-2xl border border-border p-6">
         {feed.isCollection && (
           <h2 className="font-display text-lg font-semibold text-primary mb-6">
-            All posts from collection
+            All updates
           </h2>
         )}
 
